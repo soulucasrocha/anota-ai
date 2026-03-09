@@ -46,19 +46,32 @@
           <button class="modal-close" id="modalClose">
             <svg viewBox="0 0 24 24" width="20" height="20"><path fill="currentColor" d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
           </button>
-          <div class="modal-header">
-            <div class="pix-logo">
-              <svg viewBox="0 0 512 512" width="32" height="32"><path fill="#32BCAD" d="M386.6 315.3c-21.4 0-41.5-8.3-56.6-23.4l-80.7-80.7c-6.2-6.2-16.9-6.2-23.1 0l-81 81c-15.1 15.1-35.2 23.4-56.6 23.4h-16.4l102.4 102.4c31.1 31.1 81.6 31.1 112.7 0l102.7-102.7h-3.4zM88.6 196.7c21.4 0 41.5 8.3 56.6 23.4l81 81c6.4 6.4 16.7 6.4 23.1 0l80.7-80.7c15.1-15.1 35.2-23.4 56.6-23.4h3.4L287.3 93.3c-31.1-31.1-81.6-31.1-112.7 0L72.2 196.7h16.4z"/></svg>
-            </div>
-            <h2 class="modal-title">Pagamento via PIX</h2>
-            <p class="modal-subtitle">Acesso VIP 7 dias</p>
+
+          <!-- Urgency bar -->
+          <div class="modal-urgency">
+            🔥 OFERTA EXPIRA EM <span id="countdown">10:00</span>
           </div>
 
-          <div class="modal-amount">R$ 2,90</div>
+          <!-- Header -->
+          <div class="modal-header">
+            <p class="modal-subtitle-top">🔒 Acesso imediato após pagamento</p>
+            <h2 class="modal-title">Entre no Grupo VIP</h2>
+            <div class="modal-price-row">
+              <span class="modal-price-old">R$ 29,90</span>
+              <span class="modal-amount">R$ 2,90</span>
+              <span class="modal-badge">90% OFF</span>
+            </div>
+          </div>
 
+          <!-- Social proof -->
+          <div class="modal-social">
+            <span>🟢 <strong>47 pessoas</strong> compraram hoje</span>
+          </div>
+
+          <!-- QR -->
           <div class="qr-wrap">
             <img class="qr-img" src="https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=00020126580014BR.GOV.BCB.PIX0136exemplo@pix.com.br5204000053039865406007.905802BR5910VIPAcesso6009SAOPAULO62140510VIP7DIAS016304AB12&color=000000&bgcolor=ffffff" alt="QR Code PIX" />
-            <p class="qr-hint">Escaneie o QR Code com seu banco</p>
+            <p class="qr-hint">📱 Abra seu banco e escaneie o QR Code</p>
           </div>
 
           <div class="pix-divider"><span>ou copie a chave PIX</span></div>
@@ -67,11 +80,18 @@
             <span class="pix-key" id="pixKey">exemplo@grupovip.com.br</span>
             <button class="copy-btn" id="copyBtn">
               <svg viewBox="0 0 24 24" width="16" height="16"><path fill="currentColor" d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z"/></svg>
-              <span id="copyLabel">Copiar</span>
+              <span id="copyLabel">Copiar chave</span>
             </button>
           </div>
 
-          <p class="modal-note">⏱ Após o pagamento, envie o comprovante aqui no chat</p>
+          <!-- Trust badges -->
+          <div class="modal-trust">
+            <span>🔒 Pagamento seguro</span>
+            <span>⚡ Acesso na hora</span>
+            <span>✅ Garantia 7 dias</span>
+          </div>
+
+          <p class="modal-note">Após pagar, envie o comprovante aqui no chat ✉️</p>
         </div>
       </div>
 

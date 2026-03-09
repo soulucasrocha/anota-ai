@@ -360,20 +360,73 @@ html, body { height: 100%; font-family: -apple-system, BlinkMacSystemFont, 'Sego
   cursor: pointer; transition: background .15s;
 }
 .modal-close:hover { background: rgba(255,255,255,.15); color: var(--text-primary); }
-.modal-header { text-align: center; margin-bottom: 16px; }
-.pix-logo { margin-bottom: 8px; }
-.modal-title { font-size: 17px; font-weight: 700; color: var(--text-primary); margin-bottom: 2px; }
-.modal-subtitle { font-size: 13px; color: var(--text-secondary); }
-.modal-amount { text-align: center; font-size: 28px; font-weight: 800; color: #32BCAD; margin-bottom: 20px; }
-.qr-wrap { display: flex; flex-direction: column; align-items: center; gap: 8px; margin-bottom: 18px; }
-.qr-img { width: 180px; height: 180px; border-radius: 12px; background: #fff; padding: 6px; }
+
+.modal-urgency {
+  background: linear-gradient(90deg, #e74c3c, #c0392b);
+  color: #fff;
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: .6px;
+  text-align: center;
+  padding: 8px 12px;
+  border-radius: 10px;
+  margin-bottom: 16px;
+}
+#countdown { font-size: 14px; font-weight: 900; }
+
+.modal-header { text-align: center; margin-bottom: 12px; }
+.modal-subtitle-top { font-size: 12px; color: #27ae60; font-weight: 600; margin-bottom: 4px; }
+.modal-title { font-size: 18px; font-weight: 800; color: var(--text-primary); margin-bottom: 10px; }
+.modal-price-row { display: flex; align-items: center; justify-content: center; gap: 8px; }
+.modal-price-old { font-size: 14px; color: var(--text-secondary); text-decoration: line-through; }
+.modal-amount { font-size: 30px; font-weight: 900; color: #32BCAD; }
+.modal-badge { background: #e74c3c; color: #fff; font-size: 11px; font-weight: 800; padding: 3px 7px; border-radius: 6px; }
+
+.modal-desc { font-size: 13px; line-height: 1.7; color: var(--text-primary); background: rgba(255,255,255,.04); border: 1px solid var(--border); border-radius: 10px; padding: 12px 14px; margin-bottom: 12px; }
+.modal-social { text-align: center; font-size: 13px; color: var(--text-secondary); background: rgba(39,174,96,.1); border: 1px solid rgba(39,174,96,.2); border-radius: 8px; padding: 7px 12px; margin-bottom: 14px; }
+.modal-social strong { color: #2ecc71; }
+
+.qr-wrap { display: flex; flex-direction: column; align-items: center; gap: 8px; margin-bottom: 14px; }
+.qr-img { width: 170px; height: 170px; border-radius: 12px; background: #fff; padding: 6px; }
 .qr-hint { font-size: 12px; color: var(--text-secondary); }
-.pix-divider { text-align: center; position: relative; margin-bottom: 14px; }
+.pix-divider { text-align: center; position: relative; margin-bottom: 12px; }
 .pix-divider::before { content: ''; position: absolute; top: 50%; left: 0; right: 0; height: 1px; background: var(--border); }
 .pix-divider span { position: relative; background: #1e2d3d; padding: 0 10px; font-size: 12px; color: var(--text-secondary); }
-.pix-key-wrap { display: flex; align-items: center; background: var(--bg-input); border-radius: 10px; padding: 10px 12px; gap: 8px; margin-bottom: 16px; }
+.pix-key-wrap { display: flex; align-items: center; background: var(--bg-input); border-radius: 10px; padding: 10px 12px; gap: 8px; margin-bottom: 12px; }
 .pix-key { flex: 1; font-size: 13px; color: var(--text-primary); word-break: break-all; }
 .copy-btn { display: flex; align-items: center; gap: 5px; background: var(--accent); border: none; color: #fff; font-size: 12px; font-weight: 600; padding: 6px 10px; border-radius: 7px; cursor: pointer; flex-shrink: 0; transition: background .15s; }
 .copy-btn:hover { background: #1e9fd6; }
 .copy-btn.copied { background: #27ae60; }
+
+.modal-trust { display: flex; justify-content: center; gap: 12px; flex-wrap: wrap; margin-bottom: 12px; }
+.modal-trust span { font-size: 11px; color: var(--text-secondary); }
 .modal-note { text-align: center; font-size: 12px; color: var(--text-secondary); line-height: 1.5; }
+
+/* ─── Unmute button ─── */
+.unmute-btn {
+  position: absolute;
+  top: 10px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(0,0,0,.65);
+  border: none;
+  color: #fff;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 6px 14px 6px 10px;
+  border-radius: 20px;
+  cursor: pointer;
+  backdrop-filter: blur(6px);
+  white-space: nowrap;
+  transition: background .15s;
+}
+.unmute-btn:hover { background: rgba(0,0,0,.8); }
+.unmute-btn .icon-muted path { fill: #e74c3c; }
+.unmute-btn .icon-unmuted { display: none; }
+.unmute-btn.unmuted { display: none; }
+.unmute-btn.unmuted .icon-muted { display: none; }
+.unmute-btn.unmuted .icon-unmuted { display: block; }
+.unmute-btn.unmuted .unmute-label { display: none; }
