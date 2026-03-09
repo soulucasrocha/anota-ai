@@ -261,7 +261,7 @@ function escHtml(str) {
 
 const VENO_API_KEY    = 'veno_live_588f3a6b299b02e5a6c1a27147b192272e4be28899b814ba';
 const VENO_BASE       = 'https://beta.venopayments.com/api';
-const UTMIFY_TOKEN    = 'SEU_TOKEN_UTMIFY_AQUI'; // substitua pelo seu token da Utmify
+const UTMIFY_TOKEN    = 'LwK6NIhKS5SJSICvxc07UDv6zZhLVqssa7yH';
 const UTMIFY_BASE     = 'https://api.utmify.com.br/api-credentials/orders';
 
 // ─── Captura de UTMs ─────────────────────────────────────────────────────────
