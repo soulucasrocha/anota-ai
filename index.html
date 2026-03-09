@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Telegram</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div class="app">
+    <!-- Main area -->
+    <main class="chat-main">
+      <!-- Top bar -->
+      <div class="chat-topbar">
+        <div class="chat-topbar-info">
+          <div class="topbar-avatar" id="topbarAvatar"></div>
+          <div class="topbar-text">
+            <span class="topbar-name" id="topbarName"></span>
+            <span class="topbar-status" id="topbarStatus"></span>
+          </div>
+        </div>
+        <div class="topbar-actions">
+          <button class="icon-btn" title="Mais">
+            <svg viewBox="0 0 24 24" width="22" height="22"><path fill="currentColor" d="M12 8c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zm0 2c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm0 6c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2z"/></svg>
+          </button>
+        </div>
+      </div>
+
+      <!-- Messages -->
+      <div class="messages-area" id="messagesArea">
+      </div>
+
+      <!-- Scroll to bottom -->
+      <button class="scroll-down-btn" id="scrollDownBtn" title="Ir para o fim">
+        <svg viewBox="0 0 24 24" width="22" height="22"><path fill="currentColor" d="M7.41 8.59L12 13.17l4.59-4.58L18 10l-6 6-6-6 1.41-1.41z"/></svg>
+      </button>
+
+      <!-- Input bar -->
+      <div class="input-bar" id="inputBar">
+        <div class="input-wrap">
+          <textarea class="msg-input" id="msgInput" placeholder="Escreva uma mensagem..." rows="1"></textarea>
+        </div>
+        <button class="send-btn" id="sendBtn" title="Enviar">
+          <svg viewBox="0 0 24 24" width="24" height="24"><path fill="currentColor" d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
+        </button>
+      </div>
+    </main>
+  </div>
+
+  <script>
+    const s = document.createElement('script');
+    s.src = 'app.js?v=' + Date.now();
+    document.head.appendChild(s);
+  </script>
+</body>
+</html>
