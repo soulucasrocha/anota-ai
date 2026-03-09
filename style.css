@@ -139,6 +139,9 @@ html, body { height: 100%; font-family: -apple-system, BlinkMacSystemFont, 'Sego
   background: var(--bg-bubble-in);
   border-bottom-left-radius: 4px;
 }
+.msg-row.in .bubble-media {
+  max-width: 85vw;
+}
 
 .bubble-tail {
   position: absolute;
@@ -225,7 +228,8 @@ html, body { height: 100%; font-family: -apple-system, BlinkMacSystemFont, 'Sego
 /* ─── Video bubble ─── */
 .bubble-media {
   padding: 4px 4px 6px;
-  min-width: 260px;
+  width: 85vw;
+  max-width: 480px;
 }
 .video-wrap {
   position: relative;
@@ -237,8 +241,8 @@ html, body { height: 100%; font-family: -apple-system, BlinkMacSystemFont, 'Sego
 .video-wrap video {
   display: block;
   width: 100%;
-  max-width: 360px;
-  max-height: 320px;
+  max-width: 100%;
+  max-height: 420px;
   object-fit: cover;
 }
 .video-overlay {
