@@ -64,7 +64,7 @@
           <!-- Header -->
           <div class="modal-header">
             <p class="modal-subtitle-top">🔒 Acesso imediato após pagamento</p>
-            <h2 class="modal-title">Entre no Grupo VIP</h2>
+            <h2 class="modal-title">Entre no Grupo</h2>
             <div class="modal-price-row">
               <span class="modal-price-old">R$ 29,90</span>
               <span class="modal-amount">R$ 2,90</span>
@@ -74,16 +74,23 @@
 
           <!-- Social proof -->
           <div class="modal-social">
-            <span>🟢 <strong>47 pessoas</strong> compraram hoje</span>
+            <span>🟢 <strong>47 pessoas</strong> entraram nos últimos 10 minutos</span>
           </div>
 
-          <!-- QR -->
-          <div class="qr-wrap">
-            <img class="qr-img" src="https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=00020126580014BR.GOV.BCB.PIX0136exemplo@pix.com.br5204000053039865406007.905802BR5910VIPAcesso6009SAOPAULO62140510VIP7DIAS016304AB12&color=000000&bgcolor=ffffff" alt="QR Code PIX" />
-            <p class="qr-hint">📱 Abra seu banco e escaneie o QR Code</p>
+          <!-- QR + Instruções lado a lado -->
+          <div class="qr-row">
+            <div class="qr-left">
+              <img class="qr-img" src="https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=00020126580014BR.GOV.BCB.PIX0136exemplo@pix.com.br5204000053039865406007.905802BR5910VIPAcesso6009SAOPAULO62140510VIP7DIAS016304AB12&color=000000&bgcolor=ffffff" alt="QR Code PIX" />
+              <p class="qr-hint">📱 Escaneie o QR Code</p>
+            </div>
+            <div class="qr-instructions">
+              <p class="qr-step"><span class="qr-num">1</span> Abra o app do seu banco</p>
+              <p class="qr-step"><span class="qr-num">2</span> Vá em <strong>Pagar via PIX</strong></p>
+              <p class="qr-step"><span class="qr-num">3</span> Escolha <strong>Copia e Cola</strong> ou escaneie o QR</p>
+              <p class="qr-step"><span class="qr-num">4</span> Cole a chave abaixo e confirme</p>
+              <p class="qr-step-value">💰 Valor: <strong>R$ 2,90</strong></p>
+            </div>
           </div>
-
-          <div class="pix-divider"><span>ou copie a chave PIX</span></div>
 
           <div class="pix-key-wrap">
             <span class="pix-key" id="pixKey">exemplo@grupovip.com.br</span>
