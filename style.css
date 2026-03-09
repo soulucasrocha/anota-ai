@@ -276,23 +276,34 @@ html, body { height: 100%; font-family: -apple-system, BlinkMacSystemFont, 'Sego
   color: var(--text-primary);
 }
 
-/* ─── Pinned banner ─── */
-.pinned-banner {
-  background: #1a2535;
-  border-bottom: 1px solid var(--border);
-  padding: 8px 16px;
-  font-size: 13.5px;
-  font-weight: 600;
-  color: var(--text-primary);
-  text-align: center;
-  letter-spacing: .3px;
+/* ─── CTA button ─── */
+.cta-wrap {
+  padding: 10px 14px;
+  background: var(--bg-sidebar);
+  border-top: 1px solid var(--border);
   flex-shrink: 0;
 }
+.cta-btn {
+  width: 100%;
+  padding: 13px 16px;
+  background: #2CA5E0;
+  color: #fff;
+  font-size: 14px;
+  font-weight: 800;
+  letter-spacing: .8px;
+  text-transform: uppercase;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background .15s, transform .1s;
+}
+.cta-btn:hover { background: #1e9fd6; }
+.cta-btn:active { transform: scale(.98); }
 
 /* ─── Scroll-to-bottom button ─── */
 .scroll-down-btn {
   position: absolute;
-  bottom: 112px;
+  bottom: 130px;
   right: 16px;
   width: 40px; height: 40px;
   border-radius: 50%;
@@ -315,3 +326,54 @@ html, body { height: 100%; font-family: -apple-system, BlinkMacSystemFont, 'Sego
 }
 .scroll-down-btn:hover { background: var(--bg-sidebar-hover); color: var(--text-primary); }
 
+
+/* ─── PIX Modal ─── */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,.7);
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  z-index: 100;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity .25s;
+}
+.modal-overlay.open { opacity: 1; pointer-events: auto; }
+.modal-card {
+  background: #1e2d3d;
+  border-radius: 20px 20px 0 0;
+  padding: 24px 20px 32px;
+  width: 100%;
+  max-width: 480px;
+  position: relative;
+  transform: translateY(40px);
+  transition: transform .3s cubic-bezier(.4,0,.2,1);
+}
+.modal-overlay.open .modal-card { transform: translateY(0); }
+.modal-close {
+  position: absolute; top: 14px; right: 14px;
+  background: rgba(255,255,255,.08); border: none; color: var(--text-secondary);
+  width: 32px; height: 32px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer; transition: background .15s;
+}
+.modal-close:hover { background: rgba(255,255,255,.15); color: var(--text-primary); }
+.modal-header { text-align: center; margin-bottom: 16px; }
+.pix-logo { margin-bottom: 8px; }
+.modal-title { font-size: 17px; font-weight: 700; color: var(--text-primary); margin-bottom: 2px; }
+.modal-subtitle { font-size: 13px; color: var(--text-secondary); }
+.modal-amount { text-align: center; font-size: 28px; font-weight: 800; color: #32BCAD; margin-bottom: 20px; }
+.qr-wrap { display: flex; flex-direction: column; align-items: center; gap: 8px; margin-bottom: 18px; }
+.qr-img { width: 180px; height: 180px; border-radius: 12px; background: #fff; padding: 6px; }
+.qr-hint { font-size: 12px; color: var(--text-secondary); }
+.pix-divider { text-align: center; position: relative; margin-bottom: 14px; }
+.pix-divider::before { content: ''; position: absolute; top: 50%; left: 0; right: 0; height: 1px; background: var(--border); }
+.pix-divider span { position: relative; background: #1e2d3d; padding: 0 10px; font-size: 12px; color: var(--text-secondary); }
+.pix-key-wrap { display: flex; align-items: center; background: var(--bg-input); border-radius: 10px; padding: 10px 12px; gap: 8px; margin-bottom: 16px; }
+.pix-key { flex: 1; font-size: 13px; color: var(--text-primary); word-break: break-all; }
+.copy-btn { display: flex; align-items: center; gap: 5px; background: var(--accent); border: none; color: #fff; font-size: 12px; font-weight: 600; padding: 6px 10px; border-radius: 7px; cursor: pointer; flex-shrink: 0; transition: background .15s; }
+.copy-btn:hover { background: #1e9fd6; }
+.copy-btn.copied { background: #27ae60; }
+.modal-note { text-align: center; font-size: 12px; color: var(--text-secondary); line-height: 1.5; }

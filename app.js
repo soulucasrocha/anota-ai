@@ -220,6 +220,27 @@ function escHtml(str) {
     .replace(/"/g, '&quot;');
 }
 
+// ─── PIX Modal ───────────────────────────────────────────────────────────────
+
+const pixModal   = document.getElementById('pixModal');
+const ctaBtn     = document.getElementById('ctaBtn');
+const modalClose = document.getElementById('modalClose');
+const copyBtn    = document.getElementById('copyBtn');
+const copyLabel  = document.getElementById('copyLabel');
+const pixKey     = document.getElementById('pixKey');
+
+ctaBtn.addEventListener('click', () => pixModal.classList.add('open'));
+modalClose.addEventListener('click', () => pixModal.classList.remove('open'));
+pixModal.addEventListener('click', e => { if (e.target === pixModal) pixModal.classList.remove('open'); });
+
+copyBtn.addEventListener('click', () => {
+  navigator.clipboard.writeText(pixKey.textContent).then(() => {
+    copyBtn.classList.add('copied');
+    copyLabel.textContent = 'Copiado!';
+    setTimeout(() => { copyBtn.classList.remove('copied'); copyLabel.textContent = 'Copiar'; }, 2000);
+  });
+});
+
 // ─── Init ────────────────────────────────────────────────────────────────────
 
 openChat(CONTACTS[0].id);
