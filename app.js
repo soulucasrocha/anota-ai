@@ -259,15 +259,86 @@ function escHtml(str) {
 
 // ─── PIX Modal ───────────────────────────────────────────────────────────────
 
-const pixModal   = document.getElementById('pixModal');
-const ctaBtn     = document.getElementById('ctaBtn');
-const modalClose = document.getElementById('modalClose');
-const copyBtn    = document.getElementById('copyBtn');
-const copyLabel  = document.getElementById('copyLabel');
-const pixKey     = document.getElementById('pixKey');
+const VENO_API_KEY    = 'veno_live_588f3a6b299b02e5a6c1a27147b192272e4be28899b814ba';
+const VENO_BASE       = 'https://beta.venopayments.com/api';
+const UTMIFY_TOKEN    = 'SEU_TOKEN_UTMIFY_AQUI'; // substitua pelo seu token da Utmify
+const UTMIFY_BASE     = 'https://api.utmify.com.br/api-credentials/orders';
+
+// ─── Captura de UTMs ─────────────────────────────────────────────────────────
+
+function getUtms() {
+  const p = new URLSearchParams(window.location.search);
+  return {
+    utm_source:   p.get('utm_source')   || '',
+    utm_medium:   p.get('utm_medium')   || '',
+    utm_campaign: p.get('utm_campaign') || '',
+    utm_term:     p.get('utm_term')     || '',
+    utm_content:  p.get('utm_content')  || '',
+    src:          p.get('src')          || '',
+    sck:          p.get('sck')          || '',
+  };
+}
+
+// ─── Utmify Order ────────────────────────────────────────────────────────────
+
+async function sendUtmifyOrder(orderId, status, approvedDate = null) {
+  const utms = getUtms();
+  const now  = new Date().toISOString().slice(0, 19).replace('T', ' ');
+  const payload = {
+    orderId:       String(orderId),
+    platform:      'other',
+    paymentMethod: 'pix',
+    status,
+    createdAt:     now,
+    approvedDate:  approvedDate || null,
+    refundedAt:    null,
+    customer: {
+      name:     '',
+      email:    '',
+      phone:    '',
+      document: '',
+    },
+    products: [
+      {
+        id:          'acesso-vip-7dias',
+        name:        'Acesso VIP 7 dias',
+        planId:      'acesso-vip-7dias',
+        planName:    'Acesso VIP 7 dias',
+        quantity:    1,
+        priceInCents: 290,
+      },
+    ],
+    trackingParameters: utms,
+    commission: {
+      totalPriceInCents:    290,
+      gatewayFeeInCents:    0,
+      userCommissionInCents: 290,
+    },
+  };
+  try {
+    await fetch(UTMIFY_BASE, {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json', 'x-api-token': UTMIFY_TOKEN },
+      body:    JSON.stringify(payload),
+    });
+  } catch (e) {
+    console.warn('Utmify order error:', e);
+  }
+}
+
+const pixModal    = document.getElementById('pixModal');
+const ctaBtn      = document.getElementById('ctaBtn');
+const modalClose  = document.getElementById('modalClose');
+const copyBtn     = document.getElementById('copyBtn');
+const copyLabel   = document.getElementById('copyLabel');
+const pixKey      = document.getElementById('pixKey');
+const qrImg       = document.querySelector('.qr-img');
+const qrWrap      = document.querySelector('.qr-wrap');
 
 let countdownSecs = 10 * 60;
 let countdownInterval = null;
+let pollInterval = null;
+let currentPixId = null;
 const countdownEl = document.getElementById('countdown');
 
 function startCountdown() {
@@ -282,15 +353,114 @@ function startCountdown() {
   }, 1000);
 }
 
-ctaBtn.addEventListener('click', () => { pixModal.classList.add('open'); startCountdown(); });
-modalClose.addEventListener('click', () => pixModal.classList.remove('open'));
-pixModal.addEventListener('click', e => { if (e.target === pixModal) pixModal.classList.remove('open'); });
+function setQrLoading() {
+  qrImg.style.opacity = '0.3';
+  pixKey.textContent = 'Gerando PIX...';
+  copyBtn.disabled = true;
+}
+
+function setQrData(pixCopyPaste) {
+  const encoded = encodeURIComponent(pixCopyPaste);
+  qrImg.src = `https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=${encoded}&color=000000&bgcolor=ffffff`;
+  qrImg.style.opacity = '1';
+  pixKey.textContent = pixCopyPaste;
+  copyBtn.disabled = false;
+}
+
+function setQrError() {
+  qrImg.style.opacity = '1';
+  pixKey.textContent = 'Erro ao gerar PIX. Tente novamente.';
+  copyBtn.disabled = true;
+}
+
+function showPaymentSuccess() {
+  clearInterval(pollInterval);
+  clearInterval(countdownInterval);
+  // Notifica Utmify: pagamento confirmado
+  const approvedDate = new Date().toISOString().slice(0, 19).replace('T', ' ');
+  sendUtmifyOrder(currentPixId, 'paid', approvedDate);
+  const card = document.querySelector('.modal-card');
+  card.innerHTML = `
+    <div style="text-align:center;padding:40px 20px;">
+      <div style="font-size:64px;margin-bottom:16px;">✅</div>
+      <h2 style="color:#2ecc71;font-size:20px;font-weight:800;margin-bottom:8px;">Pagamento confirmado!</h2>
+      <p style="color:var(--text-secondary);font-size:14px;line-height:1.6;">
+        Seu acesso VIP foi liberado!<br>
+        Envie o comprovante aqui no chat para confirmar. 💖
+      </p>
+      <button onclick="document.getElementById('pixModal').classList.remove('open')"
+        style="margin-top:24px;background:var(--accent);border:none;color:#fff;padding:12px 32px;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer;">
+        Fechar
+      </button>
+    </div>`;
+}
+
+async function createPix() {
+  setQrLoading();
+  try {
+    const utms = getUtms();
+    const res = await fetch(`${VENO_BASE}/v1/pix`, {
+      method: 'POST',
+      headers: { 'Authorization': `Bearer ${VENO_API_KEY}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        amount: 290,
+        description: 'Acesso VIP 7 dias',
+        metadata: utms,
+      })
+    });
+    if (!res.ok) throw new Error('API error');
+    const data = await res.json();
+    currentPixId = data.id;
+    setQrData(data.pix_copy_paste);
+    // Notifica Utmify: pagamento pendente
+    sendUtmifyOrder(currentPixId, 'waiting_payment');
+    startPolling();
+  } catch (e) {
+    setQrError();
+  }
+}
+
+function startPolling() {
+  clearInterval(pollInterval);
+  pollInterval = setInterval(async () => {
+    if (!currentPixId) return;
+    try {
+      const res = await fetch(`${VENO_BASE}/v1/pix/${currentPixId}/status`, {
+        headers: { 'Authorization': `Bearer ${VENO_API_KEY}` }
+      });
+      if (!res.ok) return;
+      const data = await res.json();
+      if (data.status === 'paid') showPaymentSuccess();
+      if (data.status === 'expired' || data.status === 'cancelled') {
+        clearInterval(pollInterval);
+        setQrError();
+      }
+    } catch (e) {}
+  }, 4000);
+}
+
+ctaBtn.addEventListener('click', () => {
+  pixModal.classList.add('open');
+  startCountdown();
+  createPix();
+});
+
+modalClose.addEventListener('click', () => {
+  pixModal.classList.remove('open');
+  clearInterval(pollInterval);
+});
+pixModal.addEventListener('click', e => {
+  if (e.target === pixModal) {
+    pixModal.classList.remove('open');
+    clearInterval(pollInterval);
+  }
+});
 
 copyBtn.addEventListener('click', () => {
   navigator.clipboard.writeText(pixKey.textContent).then(() => {
     copyBtn.classList.add('copied');
     copyLabel.textContent = 'Copiado!';
-    setTimeout(() => { copyBtn.classList.remove('copied'); copyLabel.textContent = 'Copiar'; }, 2000);
+    setTimeout(() => { copyBtn.classList.remove('copied'); copyLabel.textContent = 'Copiar chave'; }, 2000);
   });
 });
 
