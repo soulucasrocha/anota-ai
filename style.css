@@ -225,7 +225,7 @@ html, body { height: 100%; font-family: -apple-system, BlinkMacSystemFont, 'Sego
 /* ─── Video bubble ─── */
 .bubble-media {
   padding: 4px 4px 6px;
-  min-width: 200px;
+  min-width: 260px;
 }
 .video-wrap {
   position: relative;
@@ -237,8 +237,8 @@ html, body { height: 100%; font-family: -apple-system, BlinkMacSystemFont, 'Sego
 .video-wrap video {
   display: block;
   width: 100%;
-  max-width: 280px;
-  max-height: 200px;
+  max-width: 360px;
+  max-height: 320px;
   object-fit: cover;
 }
 .video-overlay {
