@@ -5,7 +5,7 @@ const CONTACTS = [
     id: 1, name: 'Bruna Coutinho', initials: 'BC', color: '#4a9da8', avatar: 'imagens e videos/perfil.jpeg',
     status: 'online', unread: 0,
     messages: [
-      { id: 1, out: false, type: 'video', src: 'imagens e videos/2edc9c87-9a23-437b-9753-c3cd5dd7e1ed.mp4', duration: '0:15', caption: '🎬 Quer se perder no meu mundinho secreto? 😏🌎\n🌸 +300 MÍDIAS: 𝗔𝗡𝗔𝗹, 𝗚𝟬𝗭𝗔𝗡𝗗𝗢, 𝗧𝟬𝗥𝗧𝗨𝗥𝗔\n🌸 VÍDEOS COM AMIGUINHAS E PRIMAS\n🌸 𝗹𝗡𝗖𝗘𝗦𝗧𝟬 𝗖𝗢𝗠 𝗠𝗘𝗨 𝗣𝗔𝗗𝗥𝗔𝗦𝗧𝟬 𝗘 𝗧𝗜𝟬\n\nE tem mais: todos os dias faço sorteios exclusivos pra ter alguém bem pertinho de mim nas gravações… quem sabe você não é o próximo? 💖', time: '09:10' },
+      { id: 1, out: false, type: 'video', src: 'imagens e videos/2edc9c87-9a23-437b-9753-c3cd5dd7e1ed.mp4', duration: '0:15', caption: '🔥+𝟭𝟯𝟬 𝗺𝗶𝗹 𝘃𝗶𝗱𝗲𝗼𝘀 𝗲 𝗳𝗼𝘁𝗼𝘀\n🎁 𝗧𝗨𝗗𝗢 𝗣𝗢𝗥 𝗖𝗔𝗧𝗘𝗚𝗢𝗥𝗜𝗔𝗦:\n🔞 𝗚𝗼𝘀𝘁𝗼𝘀𝗮𝘀 𝗽𝗼𝗯𝗿𝗲𝘀 𝗲 𝘁𝗮𝗿𝗮𝗱𝗮𝘀 𝗾𝘂𝗲 𝗻𝗮𝗼 𝘁𝗲𝗺 𝗹𝗶𝗺𝗶𝘁𝗲\n🏠 𝗗𝗼𝗻𝗮 𝗱𝗲 𝗰𝗮𝘀𝗮 𝗾𝘂𝗲𝗿𝗲𝗻𝗱𝗼 𝗮𝘁𝗲𝗻çã𝗼\n👀 𝗔𝗾𝘂𝗲𝗹𝗮 𝘀𝘂𝗮 𝗣𝗥𝟭𝗠𝟰 𝗾𝘂𝗲 𝘁𝗲 𝗱𝗲𝗶𝘅𝗮 𝗱𝗲 𝗽𝗮𝘂 𝗱𝘂𝗿𝗼\n🇧🇷 𝗕𝗿𝗮𝘀𝗶𝗹𝗲𝗶𝗿𝗮𝘀 𝗱𝗮 𝗙𝗮𝘃𝗲𝗹𝗮 | 𝗡𝗼𝗶𝗮𝗱𝗶𝗻𝗵𝗮𝘀\n🤤 𝗚𝗼𝘀𝘁𝗼𝘀𝗮𝘀 𝗱𝗼 𝗯𝗮𝗿𝗿𝗮𝗰𝗼 𝗳𝗮𝘇𝗲𝗻𝗱𝗼 𝘁𝘂𝗱𝗼 𝗾𝘂𝗮𝗻𝗱𝗼 𝗮 𝗺𝗮𝗲 𝘁𝗮 𝗳𝗼𝗿𝗮\n🚫 𝗣#𝗻𝗵𝗲𝘁𝗮 𝗲 𝗯𝗼𝗾𝘁𝗲 𝗲𝗺 𝘃𝗶𝗲𝗹𝗮𝘀, 𝗰𝗼𝗻𝘀𝘁𝗿𝘂çã𝗼\n🤰𝗠𝗔𝗘 𝗱𝗲 𝗡𝟬𝗩𝟭𝗡𝗛𝟰 𝗱𝗮 𝗽𝗲𝗿𝗶𝗳𝗲𝗿𝗶𝗮 𝗾𝘂𝗲 𝗮𝗱𝗼𝗿𝗮 𝘀𝗲 𝗲𝘅𝗶𝗯𝗶𝗿\n☠️ 𝟭𝗻𝗰𝗲𝘀𝘁𝗼𝘀 𝗻𝗮 𝗙𝗮𝘃𝟯𝗹𝗮\n➕ E muito mais que nao pode\nescrever aqui ... 🤫🙈\nBonus vitalicio: 🔵 M 9.7T.B no link do Mega ❌🧰\n(sem senha de acesso)\n🤫 Sigilo total, GRUPO a prova de quedas. TODOS os conteúdos\nenviados são 100% REAIS ✅', time: '09:10' },
     ]
   },
 ];
