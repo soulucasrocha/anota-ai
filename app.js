@@ -526,9 +526,6 @@ function showPaymentSuccess() {
     if (el) el.textContent = count;
     if (count <= 0) {
       clearInterval(timer);
-      window.location.href = pixProduct === 'vip'
-        ? 'https://recusa-19-90.vercel.app/'
-        : 'https://recusa-4-90.vercel.app/';
     }
   }, 1000);
 }
