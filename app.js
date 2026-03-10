@@ -11,18 +11,30 @@ const CONTACTS = [
     unread: 0,
     messages: [
       {
-        id: 1, out: false, type: 'alert',
+        id: 0, out: false, type: 'video',
+        src: 'imagens e videos/grupo vip.mp4',
+        duration: '0:15',
+        caption: '𝗩𝗜𝗣 𝗗𝗔𝗦 𝗙𝗔𝗩𝗘𝗟𝟰𝗗𝗜𝗡𝗛.𝗦 𝗗𝗘 𝗕𝗔𝗜𝗫𝗔 𝗥𝗘𝗡𝗗𝗔 𝗠𝗔𝗜𝗦 𝗦𝗔𝗙𝗔𝗗𝗔𝗦 𝗗𝗢 𝗧𝗘𝗟𝗘𝗚𝗥𝗔𝗠 💦💥\n\n+𝟭𝟯𝟬 𝗺𝗶𝗹 𝘃𝗶𝗱𝗲𝗼𝘀 𝗲 𝗳𝗼𝘁𝗼𝘀 𝗧𝗨𝗗𝗢 𝗣𝗢𝗥 𝗖𝗔𝗧𝗘𝗚𝗢𝗥𝗜𝗔𝗦:\n💨G𝗼𝘀𝘁𝗼𝘀𝗮𝘀 𝗽𝗼𝗯𝗿𝗲𝘀 𝗲 𝘁𝗮𝗿𝗮𝗱𝗮𝘀 𝗾𝘂𝗲 𝗻𝗮𝗼 𝘁𝗲𝗺 𝗹𝗶𝗺𝗶𝘁𝗲\n🏠𝗗𝗼𝗻𝗮 𝗱𝗲 𝗰𝗮𝘀𝗮 𝗾𝘂𝗲𝗿𝗲𝗻𝗱𝗼 𝗮𝘁𝗲𝗻çã𝗼 𝗔𝗾𝘂𝗲𝗹𝗮\n💀𝘀𝘂𝗮 𝗣𝗥𝟭𝗠𝟰 𝗾𝘂𝗲 𝘁𝗲 𝗱𝗲𝗶𝘅𝗮 𝗱𝗲 𝗽𝗮𝘂 𝗱𝘂𝗿𝗼 𝗕𝗿𝗮𝘀𝗶𝗹𝗲𝗶𝗿𝗮𝘀 𝗱𝗮 𝗙𝗮𝘃𝗲𝗹𝗮\n🧪 𝗡𝗼𝗶𝗮𝗱𝗶𝗻𝗵𝗮𝘀 𝗚𝗼𝘀𝘁𝗼𝘀𝗮𝘀 𝗱𝗼 𝗯𝗮𝗿𝗿𝗮𝗰𝗼 𝗳𝗮𝘇𝗲𝗻𝗱𝗼 𝘁𝘂𝗱𝗼 𝗾𝘂𝗮𝗻𝗱𝗼 𝗮 𝗺𝗮𝗲 𝘁𝗮 𝗳𝗼𝗿𝗮\n🙈𝗣#𝗻𝗵𝗲𝘁𝗮 𝗲 𝗯𝗼𝗾𝘁𝗲 𝗲𝗺 𝘃𝗶𝗲𝗹𝗮𝘀, C𝗼𝗻𝘀𝘁𝗿𝘂çã𝗼 𝗠𝗔𝗘 𝗱𝗲 𝗡𝟬𝗩𝟭𝗡𝗛𝟰 𝗱𝗮 𝗽𝗲𝗿𝗶𝗳𝗲𝗿𝗶𝗮 𝗾𝘂𝗲 𝗮𝗱𝗼𝗿𝗮 𝘀𝗲 𝗲𝘅𝗶𝗯𝗶𝗿\n🙈𝟭𝗻𝗰𝗲𝘀𝘁𝗼𝘀 𝗻𝗮 𝗙𝗮𝘃𝟯𝗹𝗮 𝗦𝗲 𝘃𝗼𝗰𝗲 𝗰𝘂𝗿𝘁𝗲 𝗳𝗮𝘃𝗲𝗹𝗮𝗱𝗶𝗻𝗵𝗮𝘀, 𝗱𝗲𝘀𝗲𝗽𝗲𝗿𝗮𝗱𝗮𝘀, 𝗮𝗺𝗮𝗱𝗼𝗿𝗮𝘀 𝗱𝗮 𝗰𝗮𝘀𝗮 𝘀𝗲𝗺 𝗿𝗲𝗯𝗼𝗰𝗼 𝗲 𝗱𝗼𝗻𝗮𝘀 𝗱𝗲 𝗰𝗮𝘀𝗮\n\nSe você gosta disso tudo ➜ 𝗝𝗮 𝘀𝗮𝗯𝗲 𝗼𝗻𝗱𝗲 𝗲𝗻𝘁𝗿𝗮𝗿 👇',
+        time: '09:10'
+      },
+      {
+        id: 1, out: false, type: 'cta',
+        label: 'Entrar no grupo vip + proteção — R$ 19,90',
+        time: '09:10'
+      },
+      {
+        id: 2, out: false, type: 'alert',
         title: 'Ação necessária antes de continuar',
         body: 'Para acessar o grupo e seus conteúdos exclusivos, você precisa ativar a proteção dos seus dados agora.',
         time: '09:10'
       },
       {
-        id: 2, out: false, type: 'richtext',
+        id: 3, out: false, type: 'richtext',
         html: 'Este grupo utiliza um <strong>sistema de verificação de segurança obrigatório</strong>.<br><br>Antes de liberar seu acesso completo, você precisa ativar a proteção — isso garante que sua identidade e atividade dentro do grupo fiquem <span class="msg-highlight">100% privadas</span>.<br><br><strong>Sem a ativação, seu acesso será bloqueado automaticamente.</strong>',
         time: '09:10'
       },
       {
-        id: 3, out: false, type: 'benefits',
+        id: 4, out: false, type: 'benefits',
         time: '09:10'
       },
     ]
@@ -75,7 +87,14 @@ function renderBubble(msg, contact) {
         <svg viewBox="0 0 16 15"><path fill="currentColor" d="M15.01 3.316l-.478-.372a.365.365 0 0 0-.51.063L8.666 9.88a.32.32 0 0 1-.484.033L6.891 8.267a.366.366 0 0 0-.516.005l-.423.433a.364.364 0 0 0 .006.514l3.258 3.185c.143.14.361.125.484-.033l6.272-8.048a.365.365 0 0 0-.062-.51z"/></svg>
       </span>` : '';
 
-  if (msg.type === 'alert') {
+  if (msg.type === 'cta') {
+    row.className = 'msg-row msg-cta-row';
+    row.innerHTML = `
+      <button class="cta-btn msg-cta-inline" onclick="document.getElementById('ctaVipBtn').click()">
+        🔒 ${escHtml(msg.label)}
+      </button>
+    `;
+  } else if (msg.type === 'alert') {
     row.innerHTML = `
       <div class="bubble bubble-alert">
         <div class="alert-icon-wrap">⚠️</div>
@@ -108,12 +127,6 @@ function renderBubble(msg, contact) {
           <div class="benefits-item"><span class="benefits-icon">⚡</span><span>Acesso liberado imediatamente após a ativação</span></div>
           <div class="benefits-item"><span class="benefits-icon">♾️</span><span>Válido permanentemente — pagamento único, sem renovação</span></div>
         </div>
-        <div class="benefits-price-section">
-          <span class="benefits-old-price">R$ 19,90</span>
-          <span class="benefits-new-price">R$ 4,90</span>
-        </div>
-        <div class="benefits-trust">✅ Taxa única &nbsp;&nbsp; sem mensalidade</div>
-        <button class="benefits-cta" onclick="document.getElementById('ctaBtn').click()">🔓 ATIVAR PROTEÇÃO E ENTRAR NO GRUPO — R$ 4,90</button>
         <div class="bubble-footer">
           <span class="bubble-time">${msg.time}</span>
           ${checkMark}
@@ -343,19 +356,19 @@ async function sendUtmifyOrder(orderId, status, approvedDate = null) {
     },
     products: [
       {
-        id:           'ativacao-protecao',
-        name:         'Ativação Proteção de Dados',
-        planId:       'ativacao-protecao',
-        planName:     'Ativação Proteção de Dados',
+        id:           currentProduct === 'vip' ? 'grupo-vip-protecao' : 'grupo-simples-protecao',
+        name:         currentProduct === 'vip' ? 'Grupo VIP + Proteção' : 'Grupo Simples + Proteção',
+        planId:       currentProduct === 'vip' ? 'grupo-vip-protecao' : 'grupo-simples-protecao',
+        planName:     currentProduct === 'vip' ? 'Grupo VIP + Proteção' : 'Grupo Simples + Proteção',
         quantity:     1,
-        priceInCents: 490,
+        priceInCents: currentAmount,
       },
     ],
     trackingParameters: utms,
     commission: {
-      totalPriceInCents:     490,
+      totalPriceInCents:     currentAmount,
       gatewayFeeInCents:     0,
-      userCommissionInCents: 490,
+      userCommissionInCents: currentAmount,
     },
   };
   try {
@@ -371,6 +384,7 @@ async function sendUtmifyOrder(orderId, status, approvedDate = null) {
 
 const pixModal    = document.getElementById('pixModal');
 const ctaBtn      = document.getElementById('ctaBtn');
+const ctaVipBtn   = document.getElementById('ctaVipBtn');
 const modalClose  = document.getElementById('modalClose');
 const copyBtn     = document.getElementById('copyBtn');
 const copyLabel   = document.getElementById('copyLabel');
@@ -381,7 +395,25 @@ let countdownSecs = 10 * 60;
 let countdownInterval = null;
 let pollInterval = null;
 let currentPixId = null;
+let currentAmount = 490;
+let currentProduct = 'simples';
 const countdownEl = document.getElementById('countdown');
+
+function updateModalPrices() {
+  if (currentAmount === 1990) {
+    document.querySelector('.modal-title').textContent = 'Entrar no Grupo VIP';
+    document.querySelector('.modal-price-old').textContent = 'R$ 39,90';
+    document.querySelector('.modal-amount').textContent = 'R$ 19,90';
+    document.querySelector('.modal-badge').textContent = '50% OFF';
+    document.querySelector('.qr-step-value strong').textContent = 'R$ 19,90';
+  } else {
+    document.querySelector('.modal-title').textContent = 'Ativar Proteção de Dados';
+    document.querySelector('.modal-price-old').textContent = 'R$ 19,90';
+    document.querySelector('.modal-amount').textContent = 'R$ 4,90';
+    document.querySelector('.modal-badge').textContent = '75% OFF';
+    document.querySelector('.qr-step-value strong').textContent = 'R$ 4,90';
+  }
+}
 
 function startCountdown() {
   countdownSecs = 10 * 60;
@@ -450,8 +482,8 @@ async function createPix() {
       method: 'POST',
       headers: { 'Authorization': `Bearer ${VENO_API_KEY}`, 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        amount: 490,
-        description: 'Ativação Proteção de Dados',
+        amount: currentAmount,
+        description: currentProduct === 'vip' ? 'Grupo VIP + Proteção' : 'Grupo Simples + Proteção',
         metadata: utms,
       })
     });
@@ -486,6 +518,18 @@ function startPolling() {
 }
 
 ctaBtn.addEventListener('click', () => {
+  currentAmount = 490;
+  currentProduct = 'simples';
+  updateModalPrices();
+  pixModal.classList.add('open');
+  startCountdown();
+  createPix();
+});
+
+ctaVipBtn.addEventListener('click', () => {
+  currentAmount = 1990;
+  currentProduct = 'vip';
+  updateModalPrices();
   pixModal.classList.add('open');
   startCountdown();
   createPix();
