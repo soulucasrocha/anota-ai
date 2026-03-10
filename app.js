@@ -111,6 +111,11 @@ function renderMessagesSequentially(contact, index) {
     // Show typing indicator after 2s, then show next message at 5s
     setTimeout(() => showTypingIndicator(), 2000);
     setTimeout(() => renderMessagesSequentially(contact, index + 1), 5000);
+  } else {
+    // All messages loaded — scroll back to top (video) after 2s
+    setTimeout(() => {
+      messagesArea.scrollTo({ top: 0, behavior: 'smooth' });
+    }, 2000);
   }
 }
 
