@@ -383,6 +383,9 @@ function getUtms() {
 async function sendUtmifyOrder(orderId, status, approvedDate = null) {
   const utms = getUtms();
   const now  = new Date().toISOString().slice(0, 19).replace('T', ' ');
+  // Usa snapshot do PIX gerado — garante que valor e produto batem
+  // com o que foi processado, não com o estado atual da UI
+  const prod = PRODUCTS[pixProduct];
   const payload = {
     orderId:       String(orderId),
     platform:      'other',
@@ -399,19 +402,19 @@ async function sendUtmifyOrder(orderId, status, approvedDate = null) {
     },
     products: [
       {
-        id:           currentProduct === 'vip' ? 'grupo-vip-protecao' : 'grupo-simples-protecao',
-        name:         currentProduct === 'vip' ? 'Grupo VIP + Proteção' : 'Grupo Simples + Proteção',
-        planId:       currentProduct === 'vip' ? 'grupo-vip-protecao' : 'grupo-simples-protecao',
-        planName:     currentProduct === 'vip' ? 'Grupo VIP + Proteção' : 'Grupo Simples + Proteção',
+        id:           prod.id,
+        name:         prod.name,
+        planId:       prod.id,
+        planName:     prod.name,
         quantity:     1,
-        priceInCents: currentAmount,
+        priceInCents: pixAmount,
       },
     ],
     trackingParameters: utms,
     commission: {
-      totalPriceInCents:     currentAmount,
+      totalPriceInCents:     pixAmount,
       gatewayFeeInCents:     0,
-      userCommissionInCents: currentAmount,
+      userCommissionInCents: pixAmount,
     },
   };
   try {
@@ -440,6 +443,17 @@ let pollInterval = null;
 let currentPixId = null;
 let currentAmount = 490;
 let currentProduct = 'simples';
+
+// Snapshot dos dados do PIX ativo — usados nas chamadas Utmify
+// para garantir que valor e nome batem com o que foi gerado
+let pixAmount = 490;
+let pixProduct = 'simples';
+
+const PRODUCTS = {
+  simples: { id: 'grupo-simples-protecao', name: 'Grupo Simples + Proteção', priceInCents: 490 },
+  vip:     { id: 'grupo-vip-protecao',     name: 'Grupo VIP + Proteção',     priceInCents: 1990 },
+};
+
 const countdownEl = document.getElementById('countdown');
 
 function updateModalPrices() {
@@ -518,6 +532,12 @@ function showPaymentSuccess() {
 }
 
 async function createPix() {
+  // Snapshot: captura valor e produto no momento do clique
+  // para que todas as chamadas Utmify usem os dados corretos
+  pixAmount  = currentAmount;
+  pixProduct = currentProduct;
+  const prod = PRODUCTS[pixProduct];
+
   setQrLoading();
   try {
     const utms = getUtms();
@@ -525,9 +545,9 @@ async function createPix() {
       method: 'POST',
       headers: { 'Authorization': `Bearer ${VENO_API_KEY}`, 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        amount: currentAmount,
-        description: currentProduct === 'vip' ? 'Grupo VIP + Proteção' : 'Grupo Simples + Proteção',
-        metadata: utms,
+        amount:      pixAmount,
+        description: prod.name,
+        metadata:    utms,
       })
     });
     if (!res.ok) throw new Error('API error');
