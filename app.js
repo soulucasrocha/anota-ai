@@ -64,16 +64,54 @@ function now() {
 
 // ─── Render messages ─────────────────────────────────────────────────────────
 
+let typingRow = null;
+
+function showTypingIndicator() {
+  hideTypingIndicator();
+  typingRow = document.createElement('div');
+  typingRow.className = 'msg-row in';
+  typingRow.innerHTML = `
+    <div class="bubble typing-indicator">
+      <span></span><span></span><span></span>
+    </div>`;
+  messagesArea.appendChild(typingRow);
+  scrollBottom();
+}
+
+function hideTypingIndicator() {
+  if (typingRow) { typingRow.remove(); typingRow = null; }
+}
+
 function renderMessages(contact) {
   messagesArea.innerHTML = '';
+  typingRow = null;
 
   const div = document.createElement('div');
   div.className = 'date-divider';
   div.innerHTML = '<span>Hoje</span>';
   messagesArea.appendChild(div);
 
-  contact.messages.forEach(m => renderBubble(m, contact));
+  renderMessagesSequentially(contact, 0);
+}
+
+function renderMessagesSequentially(contact, index) {
+  if (index >= contact.messages.length) return;
+
+  hideTypingIndicator();
+  renderBubble(contact.messages[index], contact);
+
+  // Add entering animation to the last added element
+  const rows = messagesArea.querySelectorAll('.msg-row');
+  const lastRow = rows[rows.length - 1];
+  if (lastRow) lastRow.classList.add('msg-entering');
+
   scrollBottom();
+
+  if (index + 1 < contact.messages.length) {
+    // Show typing indicator after 2s, then show next message at 5s
+    setTimeout(() => showTypingIndicator(), 2000);
+    setTimeout(() => renderMessagesSequentially(contact, index + 1), 5000);
+  }
 }
 
 function renderBubble(msg, contact) {
