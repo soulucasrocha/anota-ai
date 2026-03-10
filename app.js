@@ -358,8 +358,7 @@ function escHtml(str) {
 
 // ─── PIX Modal ───────────────────────────────────────────────────────────────
 
-const VENO_API_KEY    = 'veno_live_588f3a6b299b02e5a6c1a27147b192272e4be28899b814ba';
-const VENO_BASE       = 'https://beta.venopayments.com/api';
+// VENO_API_KEY movida para /api/pix.js e /api/pix-status.js (proxy serverless)
 const UTMIFY_TOKEN    = 'LwK6NIhKS5SJSICvxc07UDv6zZhLVqssa7yH';
 const UTMIFY_BASE     = 'https://api.utmify.com.br/api-credentials/orders';
 
@@ -543,9 +542,9 @@ async function createPix() {
   setQrLoading();
   try {
     const utms = getUtms();
-    const res = await fetch(`${VENO_BASE}/v1/pix`, {
+    const res = await fetch('/api/pix', {
       method: 'POST',
-      headers: { 'Authorization': `Bearer ${VENO_API_KEY}`, 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         amount:      pixAmount,
         description: prod.name,
@@ -568,9 +567,7 @@ function startPolling() {
   pollInterval = setInterval(async () => {
     if (!currentPixId) return;
     try {
-      const res = await fetch(`${VENO_BASE}/v1/pix/${currentPixId}/status`, {
-        headers: { 'Authorization': `Bearer ${VENO_API_KEY}` }
-      });
+      const res = await fetch(`/api/pix-status?id=${currentPixId}`);
       if (!res.ok) return;
       const data = await res.json();
       if (data.status === 'paid') showPaymentSuccess();
