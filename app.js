@@ -364,16 +364,29 @@ const UTMIFY_BASE     = 'https://api.utmify.com.br/api-credentials/orders';
 
 // ─── Captura de UTMs ─────────────────────────────────────────────────────────
 
+// Persiste UTMs no sessionStorage logo que a página carrega,
+// para não perder os parâmetros caso a URL seja modificada depois.
+(function persistUtms() {
+  const p = new URLSearchParams(window.location.search);
+  const keys = ['utm_source', 'utm_medium', 'utm_campaign', 'utm_term', 'utm_content', 'src', 'sck'];
+  keys.forEach(k => {
+    const v = p.get(k);
+    if (v) sessionStorage.setItem('utm_' + k, v);
+  });
+})();
+
 function getUtms() {
   const p = new URLSearchParams(window.location.search);
+  // Prioridade: URL atual → sessionStorage (capturado no primeiro carregamento)
+  const get = k => p.get(k) || sessionStorage.getItem('utm_' + k) || '';
   return {
-    utm_source:   p.get('utm_source')   || '',
-    utm_medium:   p.get('utm_medium')   || '',
-    utm_campaign: p.get('utm_campaign') || '',
-    utm_term:     p.get('utm_term')     || '',
-    utm_content:  p.get('utm_content')  || '',
-    src:          p.get('src')          || '',
-    sck:          p.get('sck')          || '',
+    utm_source:   get('utm_source'),
+    utm_medium:   get('utm_medium'),
+    utm_campaign: get('utm_campaign'),
+    utm_term:     get('utm_term'),
+    utm_content:  get('utm_content'),
+    src:          get('src'),
+    sck:          get('sck'),
   };
 }
 
