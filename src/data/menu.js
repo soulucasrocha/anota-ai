@@ -47,7 +47,7 @@ export const MENU = {
     {
       id: 'dest-calabresa', name: 'Pizza Calabresa 35cm',
       desc: 'Molho, Muçarela, Calabresa, Orégano',
-      price: 2499,
+      price: 2499, oldPrice: 3699, tag: '32% OFF',
       img: B + '202309300548_01YC_i',
       steps: ['notes'],
     },
