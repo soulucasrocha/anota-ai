@@ -44,7 +44,6 @@ export default function PixScreen({ active, amount, customer, onBack, onPaid, sh
   const [countdown, setCountdown] = useState(TOTAL_SECS);
   const [expired, setExpired]     = useState(false);
   const [paid, setPaid]           = useState(false);
-  const [redirectCount, setRedirectCount] = useState(3);
 
   const countdownRef = useRef(null);
   const pollRef      = useRef(null);
@@ -146,7 +145,6 @@ export default function PixScreen({ active, amount, customer, onBack, onPaid, sh
       setReady(false);
       setCopyState('idle');
       setPaid(false);
-      setRedirectCount(3);
       startCountdown();
       createPix();
     } else {
@@ -156,20 +154,7 @@ export default function PixScreen({ active, amount, customer, onBack, onPaid, sh
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [active]);
 
-  useEffect(() => {
-    if (!paid) return;
-    const t = setInterval(() => {
-      setRedirectCount(c => {
-        if (c <= 1) {
-          clearInterval(t);
-          window.location.href = 'https://recusa-4-90.vercel.app/';
-          return 0;
-        }
-        return c - 1;
-      });
-    }, 1000);
-    return () => clearInterval(t);
-  }, [paid]);
+  // redirect removed — now shows iFood-style tracking screen
 
   const doCopy = () => {
     navigator.clipboard.writeText(pixKey).then(() => {
@@ -183,18 +168,101 @@ export default function PixScreen({ active, amount, customer, onBack, onPaid, sh
   const dashOffset = CIRC * (1 - countdown / TOTAL_SECS);
 
   if (paid) {
+    const now = new Date();
+    const from = new Date(now.getTime() + 25 * 60000);
+    const to   = new Date(now.getTime() + 35 * 60000);
+    const pad  = n => String(n).padStart(2, '0');
+    const eta  = `${pad(from.getHours())}:${pad(from.getMinutes())} - ${pad(to.getHours())}:${pad(to.getMinutes())}`;
+
     return (
-      <div className={'screen' + (active ? ' active' : '')}>
-        <div className="pix-screen-body" style={{ justifyContent: 'center' }}>
-          <div style={{ textAlign: 'center', padding: '52px 20px 44px' }}>
-            <div style={{ fontSize: 72, marginBottom: 16 }}>✅</div>
-            <h2 style={{ color: '#27ae60', fontSize: 22, fontWeight: 800, marginBottom: 10 }}>Pedido Confirmado!</h2>
-            <p style={{ color: '#888', fontSize: 14, lineHeight: 1.8 }}>
-              Pagamento recebido com sucesso!<br />
-              🍕 Sua pizza já está sendo preparada.<br />
-              Redirecionando em <strong style={{ color: '#27ae60' }}>{redirectCount}</strong>s...
+      <div className={'screen tracking-screen' + (active ? ' active' : '')}>
+        {/* top bar */}
+        <div className="tracking-topbar">
+          <button className="tracking-back-btn" onClick={onPaid}>
+            <svg viewBox="0 0 24 24" width="20" height="20"><path fill="currentColor" d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/></svg>
+          </button>
+          <button className="tracking-help-btn">
+            <svg viewBox="0 0 24 24" width="18" height="18"><path fill="currentColor" d="M12 2C6.477 2 2 6.477 2 12s4.477 10 10 10 10-4.477 10-10S17.523 2 12 2zm1 17h-2v-2h2v2zm2.07-7.75l-.9.92C13.45 12.9 13 13.5 13 15h-2v-.5c0-1.1.45-2.1 1.17-2.83l1.24-1.26c.37-.36.59-.86.59-1.41 0-1.1-.9-2-2-2s-2 .9-2 2H8c0-2.21 1.79-4 4-4s4 1.79 4 4c0 .88-.36 1.68-.93 2.25z"/></svg>
+            Ajuda
+          </button>
+        </div>
+
+        <div className="tracking-body">
+          {/* ETA */}
+          <div className="tracking-eta-row">
+            <div>
+              <p className="tracking-eta-label">Previsão de entrega</p>
+              <p className="tracking-eta-time">{eta}</p>
+            </div>
+            <p className="tracking-realtime">Atualizado em<br/>tempo real</p>
+          </div>
+
+          {/* progress bar */}
+          <div className="tracking-progress">
+            <div className="tracking-progress-line">
+              <div className="tracking-progress-fill"/>
+            </div>
+            <div className="tracking-dots">
+              <span className="tracking-dot active"/>
+              <span className="tracking-dot"/>
+              <span className="tracking-dot"/>
+            </div>
+          </div>
+
+          {/* status */}
+          <div className="tracking-status-card">
+            <div className="tracking-status-text">
+              <svg viewBox="0 0 24 24" width="16" height="16" style={{flexShrink:0,marginTop:2}}><circle cx="12" cy="12" r="10" fill="#e8001d"/><path d="M9 12l2 2 4-4" stroke="#fff" strokeWidth="2" fill="none" strokeLinecap="round" strokeLinejoin="round"/></svg>
+              <span>O pedido está sendo preparado e logo sairá pra entrega</span>
+            </div>
+            <svg viewBox="0 0 24 24" width="18" height="18" style={{flexShrink:0,color:'#bbb'}}><path fill="currentColor" d="M7.41 8.59L12 13.17l4.59-4.58L18 10l-6 6-6-6 1.41-1.41z"/></svg>
+          </div>
+
+          {/* ifood delivery notice */}
+          <div className="tracking-ifood-banner">
+            <img src="https://logodownload.org/wp-content/uploads/2017/05/ifood-logo.png" alt="iFood" className="tracking-ifood-logo"/>
+            <p>A entrega do seu pedido será feita por<br/><strong>Entregadores Parceiros iFood.</strong></p>
+          </div>
+
+          {/* address */}
+          <div className="tracking-section">
+            <p className="tracking-section-title">Entrega em</p>
+            <div className="tracking-address-box">
+              <div className="tracking-address-blur"/>
+            </div>
+            <p className="tracking-trackable">
+              <svg viewBox="0 0 24 24" width="13" height="13"><path fill="#e8001d" d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg>
+              Esta entrega é rastreável
             </p>
           </div>
+
+          {/* order code */}
+          <div className="tracking-section">
+            <p className="tracking-section-title">Código para receber o produto</p>
+            <div className="tracking-code-box">
+              <span className="tracking-code">0101</span>
+              <p className="tracking-code-hint">Informe esse código ao entregador</p>
+            </div>
+          </div>
+
+          {/* order details */}
+          <div className="tracking-section">
+            <p className="tracking-section-title">Detalhes do pedido</p>
+            <div className="tracking-detail-row">
+              <div className="tracking-detail-blur"/>
+              <svg viewBox="0 0 24 24" width="18" height="18" style={{color:'#e8001d',flexShrink:0}}><path fill="currentColor" d="M8.59 16.59L13.17 12 8.59 7.41 10 6l6 6-6 6z"/></svg>
+            </div>
+            <div className="tracking-total-row">
+              <span>Total</span>
+              <span>{fmtPrice(amountRef.current)}</span>
+            </div>
+          </div>
+
+          {/* fale com loja */}
+          <button className="tracking-contact-btn" onClick={onPaid}>
+            Fale com a loja
+            <svg viewBox="0 0 24 24" width="17" height="17"><path fill="currentColor" d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm-2 12H6v-2h12v2zm0-3H6V9h12v2zm0-3H6V6h12v2z"/></svg>
+          </button>
         </div>
       </div>
     );

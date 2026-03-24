@@ -13,6 +13,7 @@ import PixScreen from './components/screens/PixScreen'
 import ProductModal from './components/modals/ProductModal'
 import CheckoutConfirmPopup from './components/modals/CheckoutConfirmPopup'
 import CartBar from './components/CartBar'
+import DeliveryBanner from './components/DeliveryBanner'
 
 export default function App() {
   useEffect(() => { persistUtms(); }, []);
@@ -102,6 +103,7 @@ export default function App() {
       <Header onSearchOpen={() => setSearchOpen(true)} showToast={showToast} />
       <StoreInfoBar />
       <CategoryNav />
+      <DeliveryBanner />
       <MenuMain onItemClick={handleItemClick} />
 
       <CartBar
