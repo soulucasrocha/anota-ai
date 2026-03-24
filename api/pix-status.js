@@ -1,10 +1,10 @@
-// Proxy serverless — evita CORS ao chamar a Veno do browser
+// Proxy serverless — consulta status do PIX na Veno
 module.exports = async function handler(req, res) {
   if (req.method !== 'GET') {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  const VENO_API_KEY = 'veno_live_588f3a6b299b02e5a6c1a27147b192272e4be28899b814ba';
+  const VENO_API_KEY = 'veno_live_4ec08136a86b71eca6256b181c17f5dc6d5d5cb684933313';
   const { id } = req.query;
 
   if (!id) {

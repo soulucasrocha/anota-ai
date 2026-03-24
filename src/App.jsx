@@ -152,6 +152,7 @@ export default function App() {
       <PixScreen
         active={screen === 'pix'}
         amount={getCartTotal()}
+        customer={{ name: checkoutName, phone: checkoutPhone }}
         onBack={() => setScreen('finalize')}
         onPaid={() => { clearCart(); setScreen(null); }}
         showToast={showToast}

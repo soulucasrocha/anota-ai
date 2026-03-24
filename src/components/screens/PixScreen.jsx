@@ -5,7 +5,39 @@ import { getUtms, sendUtmifyOrder } from '../../utils/utmify'
 const TOTAL_SECS = 300;
 const CIRC = 2 * Math.PI * 54;
 
-export default function PixScreen({ active, amount, onBack, onPaid, showToast }) {
+// ── Meta Pixel helpers ───────────────────────────────────────────────────────
+
+function firePixelPurchase(value, orderId) {
+  try {
+    if (typeof window.fbq === 'function') {
+      window.fbq('track', 'Purchase', {
+        value:    value / 100,
+        currency: 'BRL',
+        order_id: orderId,
+      });
+    }
+  } catch (e) { console.warn('fbq:', e); }
+}
+
+async function sendCapiPurchase(value, orderId) {
+  try {
+    await fetch('/api/meta-event', {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body:    JSON.stringify({
+        event_name: 'Purchase',
+        value,
+        currency:  'BRL',
+        event_id:  orderId,
+        order_id:  orderId,
+      }),
+    });
+  } catch (e) { console.warn('CAPI:', e); }
+}
+
+// ────────────────────────────────────────────────────────────────────────────
+
+export default function PixScreen({ active, amount, customer, onBack, onPaid, showToast }) {
   const [pixKey, setPixKey]       = useState('Gerando PIX...');
   const [ready, setReady]         = useState(false);
   const [copyState, setCopyState] = useState('idle');
@@ -51,7 +83,12 @@ export default function PixScreen({ active, amount, onBack, onPaid, showToast })
         if (data.status === 'paid') {
           stopAll();
           const approvedDate = new Date().toISOString().slice(0, 19).replace('T', ' ');
-          sendUtmifyOrder(id, 'paid', amountRef.current, approvedDate);
+          const customerData = customer
+            ? { name: customer.name || '', email: '', phone: customer.phone || '', document: '' }
+            : null;
+          sendUtmifyOrder(id, 'paid', amountRef.current, approvedDate, customerData);
+          firePixelPurchase(amountRef.current, id);
+          sendCapiPurchase(amountRef.current, id);
           setPaid(true);
         }
         if (data.status === 'expired' || data.status === 'cancelled') {
@@ -68,14 +105,25 @@ export default function PixScreen({ active, amount, onBack, onPaid, showToast })
       const res = await fetch('/api/pix', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ amount: amountRef.current, description: 'Pedido Pizzaria', metadata: utms }),
+        body: JSON.stringify({
+          amount:       amountRef.current,
+          description:  'Pedido Pizzaria',
+          payer: customer ? {
+            name:  customer.name  || undefined,
+            phone: customer.phone || undefined,
+          } : undefined,
+          ...utms,
+        }),
       });
       if (!res.ok) throw new Error('api error');
       const data = await res.json();
       pixIdRef.current = data.id;
       setPixKey(data.pix_copy_paste);
       setReady(true);
-      sendUtmifyOrder(data.id, 'waiting_payment', amountRef.current);
+      const customerData = customer
+        ? { name: customer.name || '', email: '', phone: customer.phone || '', document: '' }
+        : null;
+      sendUtmifyOrder(data.id, 'waiting_payment', amountRef.current, null, customerData);
       startPolling(data.id);
     } catch {
       setPixKey('Erro ao gerar PIX. Feche e tente novamente.');

@@ -8,7 +8,7 @@ export function persistUtms() {
 
 export function getUtms() {
   const p = new URLSearchParams(window.location.search);
-  const get = k => p.get(k) || sessionStorage.getItem('utm_' + k) || '';
+  const get = k => p.get(k) || sessionStorage.getItem('utm_' + k) || null;
   return {
     utm_source:   get('utm_source'),
     utm_medium:   get('utm_medium'),
@@ -20,10 +20,10 @@ export function getUtms() {
   };
 }
 
-const UTMIFY_TOKEN = 'LwK6NIhKS5SJSICvxc07UDv6zZhLVqssa7yH';
+const UTMIFY_TOKEN = 'prb96d12vAUsGSDjeIRvwFkSCqUEcH1HnQOB';
 const UTMIFY_BASE  = 'https://api.utmify.com.br/api-credentials/orders';
 
-export async function sendUtmifyOrder(orderId, status, amountCents, approvedDate = null) {
+export async function sendUtmifyOrder(orderId, status, amountCents, approvedDate = null, customer = null) {
   const utms = getUtms();
   const now  = new Date().toISOString().slice(0, 19).replace('T', ' ');
   const payload = {
@@ -34,12 +34,12 @@ export async function sendUtmifyOrder(orderId, status, amountCents, approvedDate
     createdAt:     now,
     approvedDate:  approvedDate || null,
     refundedAt:    null,
-    customer:      { name: '', email: '', phone: '', document: '' },
+    customer: customer || { name: '', email: '', phone: '', document: '' },
     products: [{
       id:           'pedido-pizzaria',
       name:         'Pedido Pizzaria',
-      planId:       'pedido-pizzaria',
-      planName:     'Pedido Pizzaria',
+      planId:       null,
+      planName:     null,
       quantity:     1,
       priceInCents: amountCents,
     }],
