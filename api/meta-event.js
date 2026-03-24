@@ -1,11 +1,11 @@
 // Serverless — envia evento de compra para Meta via Conversions API (CAPI)
-module.exports = async function handler(req, res) {
+export default async function handler(req, res) {
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  const PIXEL_ID      = '930795412870152';
-  const ACCESS_TOKEN  = 'EAAYVcxytQrABRCALovoSTcNa3qllr0HtFJ83Vy5ud7YkynrbSQtWqjd39ZA1IdZADvZCSmc1eES19NOqRR7cdi046DqvZBUOoo0leX2L7NbdZAuaVZBWZA38kfzFjT6K8j8FZBKswK3kx5MppRUtwYiko3q6UVmQGg8w7KPKoDzbQkrGX9l8vbb3FU638CJ4ieorKAZDZD';
+  const PIXEL_ID     = '930795412870152';
+  const ACCESS_TOKEN = 'EAAYVcxytQrABRCALovoSTcNa3qllr0HtFJ83Vy5ud7YkynrbSQtWqjd39ZA1IdZADvZCSmc1eES19NOqRR7cdi046DqvZBUOoo0leX2L7NbdZAuaVZBWZA38kfzFjT6K8j8FZBKswK3kx5MppRUtwYiko3q6UVmQGg8w7KPKoDzbQkrGX9l8vbb3FU638CJ4ieorKAZDZD';
 
   const {
     event_name = 'Purchase',
@@ -17,11 +17,11 @@ module.exports = async function handler(req, res) {
 
   const eventData = {
     event_name,
-    event_time: Math.floor(Date.now() / 1000),
-    event_id:   event_id || order_id || String(Date.now()),
+    event_time:    Math.floor(Date.now() / 1000),
+    event_id:      event_id || order_id || String(Date.now()),
     action_source: 'website',
     custom_data: {
-      value:    (value || 0) / 100,
+      value:        (value || 0) / 100,
       currency,
       content_type: 'product',
     },
@@ -41,4 +41,4 @@ module.exports = async function handler(req, res) {
   } catch (e) {
     res.status(500).json({ error: 'Internal server error' });
   }
-};
+}

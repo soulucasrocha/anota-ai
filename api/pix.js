@@ -1,5 +1,5 @@
 // Proxy serverless — cria PIX via Veno e repassa UTMs diretamente
-module.exports = async function handler(req, res) {
+export default async function handler(req, res) {
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
   }
@@ -22,14 +22,14 @@ module.exports = async function handler(req, res) {
   const payload = {
     amount,
     description: description || 'Pedido Pizzaria',
-    ...(payer && { payer }),
-    ...(utm_source    && { utm_source }),
-    ...(utm_medium    && { utm_medium }),
-    ...(utm_campaign  && { utm_campaign }),
-    ...(utm_term      && { utm_term }),
-    ...(utm_content   && { utm_content }),
-    ...(src           && { src }),
-    ...(sck           && { sck }),
+    ...(payer        && { payer }),
+    ...(utm_source   && { utm_source }),
+    ...(utm_medium   && { utm_medium }),
+    ...(utm_campaign && { utm_campaign }),
+    ...(utm_term     && { utm_term }),
+    ...(utm_content  && { utm_content }),
+    ...(src          && { src }),
+    ...(sck          && { sck }),
   };
 
   try {
@@ -47,4 +47,4 @@ module.exports = async function handler(req, res) {
   } catch (e) {
     res.status(500).json({ error: 'Internal server error' });
   }
-};
+}

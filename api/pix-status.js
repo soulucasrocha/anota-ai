@@ -1,5 +1,5 @@
 // Proxy serverless — consulta status do PIX na Veno
-module.exports = async function handler(req, res) {
+export default async function handler(req, res) {
   if (req.method !== 'GET') {
     return res.status(405).json({ error: 'Method not allowed' });
   }
@@ -23,4 +23,4 @@ module.exports = async function handler(req, res) {
   } catch (e) {
     res.status(500).json({ error: 'Internal server error' });
   }
-};
+}
