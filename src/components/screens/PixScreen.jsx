@@ -37,7 +37,7 @@ async function sendCapiPurchase(value, orderId) {
 
 // ────────────────────────────────────────────────────────────────────────────
 
-export default function PixScreen({ active, amount, customer, onBack, onPaid, showToast }) {
+export default function PixScreen({ active, amount, customer, deliveryAddress, onBack, onPaid, showToast }) {
   const [pixKey, setPixKey]       = useState('Gerando PIX...');
   const [ready, setReady]         = useState(false);
   const [copyState, setCopyState] = useState('idle');
@@ -228,7 +228,10 @@ export default function PixScreen({ active, amount, customer, onBack, onPaid, sh
           <div className="tracking-section">
             <p className="tracking-section-title">Entrega em</p>
             <div className="tracking-address-box">
-              <div className="tracking-address-blur"/>
+              {deliveryAddress
+                ? <p className="tracking-address-text">{deliveryAddress}</p>
+                : <div className="tracking-address-blur"/>
+              }
             </div>
             <p className="tracking-trackable">
               <svg viewBox="0 0 24 24" width="13" height="13"><path fill="#e8001d" d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg>

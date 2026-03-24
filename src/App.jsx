@@ -1,5 +1,6 @@
 import { useState, useCallback, useEffect, useRef } from 'react'
 import { persistUtms } from './utils/utmify'
+import { getUserGeo } from './utils/geo'
 import Header from './components/Header'
 import StoreInfoBar from './components/StoreInfoBar'
 import CategoryNav from './components/CategoryNav'
@@ -29,6 +30,17 @@ export default function App() {
   const [checkoutPhone, setCheckoutPhone]       = useState('');
   const [confirmOpen, setConfirmOpen]           = useState(false);
   const [address, setAddress]                   = useState('');
+  const [geoData, setGeoData]                   = useState(null);
+
+  // ── Geolocation ───────────────────────────────────────────────────────────
+  useEffect(() => {
+    getUserGeo()
+      .then(geo => {
+        setGeoData(geo);
+        setAddress(prev => prev || geo.shortAddress); // pré-preenche só se vazio
+      })
+      .catch(() => {}); // permissão negada — silencioso
+  }, []);
 
   // ── Cart helpers ──────────────────────────────────────────────────────────
 
@@ -103,7 +115,7 @@ export default function App() {
       <Header onSearchOpen={() => setSearchOpen(true)} showToast={showToast} />
       <StoreInfoBar />
       <CategoryNav />
-      <DeliveryBanner />
+      <DeliveryBanner geoData={geoData} />
       <MenuMain onItemClick={handleItemClick} />
 
       <CartBar
@@ -157,12 +169,14 @@ export default function App() {
         getCartTotal={getCartTotal}
         onBack={() => setScreen('checkout')}
         onAdvance={() => setScreen('pix')}
+        geoData={geoData}
       />
 
       <PixScreen
         active={screen === 'pix'}
         amount={getCartTotal()}
         customer={{ name: checkoutName, phone: checkoutPhone }}
+        deliveryAddress={address}
         onBack={() => setScreen('finalize')}
         onPaid={() => { clearCart(); setScreen(null); }}
         showToast={showToast}

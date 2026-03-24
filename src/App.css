@@ -952,6 +952,34 @@ body {
   letter-spacing: .3px;
 }
 
+/* ─── Address Autocomplete ───────────────────────────────────────────────── */
+.address-autocomplete-wrap { position: relative; }
+.address-searching {
+  position: absolute; right: 12px; top: 50%;
+  transform: translateY(-50%); font-size: 14px;
+  pointer-events: none;
+}
+.address-suggestions {
+  position: absolute; top: calc(100% + 4px); left: 0; right: 0;
+  background: #fff; border: 1px solid var(--border);
+  border-radius: var(--radius); box-shadow: var(--shadow);
+  z-index: 600; list-style: none; max-height: 220px; overflow-y: auto;
+}
+.address-suggestion-item {
+  display: flex; align-items: flex-start; gap: 8px;
+  padding: 11px 14px; font-size: 13px; line-height: 1.4;
+  cursor: pointer; color: var(--text); border-bottom: 1px solid var(--border);
+}
+.address-suggestion-item:last-child { border-bottom: none; }
+.address-suggestion-item:hover { background: var(--red-bg); }
+.finalize-geo-badge {
+  margin-left: 8px; font-size: 11px; font-weight: 600;
+  color: var(--red); background: var(--red-bg);
+  padding: 2px 8px; border-radius: 12px;
+}
+.finalize-geo-hint { font-size: 12px; color: var(--text-sec); margin-top: 6px; padding-left: 2px; }
+.tracking-address-text { padding: 12px 14px; font-size: 13.5px; color: var(--text); line-height: 1.4; }
+
 /* ─── Order Tracking Screen (iFood style) ───────────────────────────────── */
 .tracking-screen { background: #f5f5f5; }
 .tracking-topbar {
