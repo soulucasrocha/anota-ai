@@ -45,6 +45,13 @@ export const STEP_TPL = {
 export const MENU = {
   destaques: [
     {
+      id: 'dest-calabresa', name: 'Pizza Calabresa 35cm',
+      desc: 'Molho, Muçarela, Calabresa, Orégano',
+      price: 2499,
+      img: B + '202309300548_01YC_i',
+      steps: ['notes'],
+    },
+    {
       id: 'dest1', name: 'Combo Super 4 Pizza De 35cm + 2 Refrigerante',
       desc: '4 Pizzas qualquer sabor do cardápio + 2 Guaraná Antarctica ou Pepsi 1,5l',
       price: 12999, oldPrice: 13989, tag: '7% OFF',

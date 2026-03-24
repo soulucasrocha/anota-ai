@@ -12,6 +12,7 @@ import FinalizeScreen from './components/screens/FinalizeScreen'
 import PixScreen from './components/screens/PixScreen'
 import ProductModal from './components/modals/ProductModal'
 import CheckoutConfirmPopup from './components/modals/CheckoutConfirmPopup'
+import CartBar from './components/CartBar'
 
 export default function App() {
   useEffect(() => { persistUtms(); }, []);
@@ -103,6 +104,13 @@ export default function App() {
       <CategoryNav />
       <MenuMain onItemClick={handleItemClick} />
 
+      <CartBar
+        cartCount={getCartCount()}
+        cartTotal={getCartTotal()}
+        visible={screen === null && getCartCount() > 0}
+        onClick={() => setScreen('cart')}
+      />
+
       <BottomNav
         cartCount={getCartCount()}
         onHome={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
@@ -177,7 +185,7 @@ export default function App() {
 
       {toast && (
         <div style={{
-          position: 'fixed', bottom: '72px', left: '50%', transform: 'translateX(-50%)',
+          position: 'fixed', bottom: getCartCount() > 0 && screen === null ? '132px' : '72px', left: '50%', transform: 'translateX(-50%)',
           background: '#1a1a1a', color: '#fff', padding: '10px 18px', borderRadius: '24px',
           fontSize: '14px', fontWeight: '600', zIndex: 500,
           pointerEvents: 'none', whiteSpace: 'nowrap', maxWidth: 'calc(100vw - 40px)',
