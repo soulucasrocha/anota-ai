@@ -2,9 +2,9 @@
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Telegram</title>
-  <link rel="stylesheet" href="style.css" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
+  <title>Superp Delivery — Cardápio Digital</title>
+  <link rel="stylesheet" href="style.css?v=5" />
   <!-- Utmify Pixel -->
   <script>
     window.pixelId = "69aea0787dbca52a97affd4e";
@@ -16,112 +16,333 @@
   </script>
 </head>
 <body>
-  <div class="app">
-    <!-- Main area -->
-    <main class="chat-main">
-      <!-- Top bar -->
-      <div class="chat-topbar">
-        <div class="chat-topbar-info">
-          <div class="topbar-avatar" id="topbarAvatar"></div>
-          <div class="topbar-text">
-            <span class="topbar-name" id="topbarName"></span>
-            <span class="topbar-status" id="topbarStatus"></span>
-          </div>
+
+  <!-- ── Header ─────────────────────────────────────────────────────────── -->
+  <header class="header">
+    <div class="header-inner">
+      <div class="header-left">
+        <div class="store-logo" id="storeLogo">
+          <img src="https://staginganotaai.s3.us-west-2.amazonaws.com/produtos/1700063317725blob" alt="Logo" />
         </div>
-        <div class="topbar-actions">
-          <button class="icon-btn" title="Mais">
-            <svg viewBox="0 0 24 24" width="22" height="22"><path fill="currentColor" d="M12 8c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zm0 2c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm0 6c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2z"/></svg>
-          </button>
-        </div>
+        <span class="store-name" id="storeName">Superp Delivery</span>
       </div>
-
-      <!-- Messages -->
-      <div class="messages-area" id="messagesArea">
-      </div>
-
-      <!-- Scroll to bottom -->
-      <button class="scroll-down-btn" id="scrollDownBtn" title="Ir para o fim">
-        <svg viewBox="0 0 24 24" width="22" height="22"><path fill="currentColor" d="M7.41 8.59L12 13.17l4.59-4.58L18 10l-6 6-6-6 1.41-1.41z"/></svg>
-      </button>
-
-      <!-- CTA button -->
-      <div class="cta-wrap">
-        <button class="cta-btn" id="ctaBtn">🔒 ENTRAR NO GRUPO SIMPLES + PROTEÇÃO — R$ 4,90</button>
-        <button class="cta-btn cta-btn-secondary" id="ctaVipBtn">🔒 ENTRAR NO GRUPO VIP + PROTEÇÃO — R$ 19,90</button>
-      </div>
-
-      <!-- PIX Modal -->
-      <div class="modal-overlay" id="pixModal">
-        <div class="modal-card">
-          <button class="modal-close" id="modalClose">
-            <svg viewBox="0 0 24 24" width="20" height="20"><path fill="currentColor" d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
-          </button>
-
-          <!-- Urgency bar -->
-          <div class="modal-urgency">
-            🔥 OFERTA EXPIRA EM <span id="countdown">10:00</span>
-          </div>
-
-          <!-- Header -->
-          <div class="modal-header">
-            <p class="modal-subtitle-top">🔒 Ativação imediata após pagamento</p>
-            <h2 class="modal-title">Ativar Proteção de Dados</h2>
-            <div class="modal-price-row">
-              <span class="modal-price-old">R$ 19,90</span>
-              <span class="modal-amount">R$ 4,90</span>
-              <span class="modal-badge">75% OFF</span>
-            </div>
-          </div>
-
-          <!-- Social proof -->
-          <div class="modal-social">
-            <span>🟢 <strong>47 pessoas</strong> ativaram a proteção nos últimos 10 minutos</span>
-          </div>
-
-          <!-- QR + Instruções lado a lado -->
-          <div class="qr-row">
-            <div class="qr-left">
-              <img class="qr-img" src="https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=00020126580014BR.GOV.BCB.PIX0136exemplo@pix.com.br5204000053039865406007.905802BR5910VIPAcesso6009SAOPAULO62140510VIP7DIAS016304AB12&color=000000&bgcolor=ffffff" alt="QR Code PIX" />
-              <p class="qr-hint">📱 Escaneie o QR Code</p>
-            </div>
-            <div class="qr-instructions">
-              <p class="qr-step"><span class="qr-num">1</span> Abra o app do seu banco</p>
-              <p class="qr-step"><span class="qr-num">2</span> Vá em <strong>Pagar via PIX</strong></p>
-              <p class="qr-step"><span class="qr-num">3</span> Escolha <strong>Copia e Cola</strong> ou escaneie o QR</p>
-              <p class="qr-step"><span class="qr-num">4</span> Cole a chave abaixo e confirme</p>
-              <p class="qr-step-value">💰 Valor: <strong>R$ 4,90</strong></p>
-            </div>
-          </div>
-
-          <div class="pix-key-wrap">
-            <span class="pix-key" id="pixKey">exemplo@grupovip.com.br</span>
-            <button class="copy-btn" id="copyBtn">
-              <svg viewBox="0 0 24 24" width="16" height="16"><path fill="currentColor" d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z"/></svg>
-              <span id="copyLabel">Copiar chave</span>
-            </button>
-          </div>
-
-          <!-- Trust badges -->
-          <div class="modal-trust">
-            <span>🔒 Pagamento seguro</span>
-            <span>⚡ Acesso na hora</span>
-            <span>✅ Garantia 7 dias</span>
-          </div>
-
-          <p class="modal-note">Após o pagamento sua proteção será ativada automaticamente ✅</p>
-        </div>
-      </div>
-
-      <!-- Input bar -->
-      <div class="input-bar" id="inputBar">
-        <div class="input-wrap">
-          <textarea class="msg-input" id="msgInput" placeholder="Mensagem..." rows="1"></textarea>
-        </div>
-        <button class="send-btn" id="sendBtn" title="Enviar">
-          <svg viewBox="0 0 24 24" width="24" height="24"><path fill="currentColor" d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
+      <div class="header-right">
+        <button class="hdr-btn" id="searchBtn" title="Buscar">
+          <svg viewBox="0 0 24 24" width="22" height="22"><path fill="currentColor" d="M15.5 14h-.79l-.28-.27A6.471 6.471 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg>
+        </button>
+        <button class="hdr-btn" id="shareBtn" title="Compartilhar">
+          <svg viewBox="0 0 24 24" width="22" height="22"><path fill="currentColor" d="M18 16.08c-.76 0-1.44.3-1.96.77L8.91 12.7c.05-.23.09-.46.09-.7s-.04-.47-.09-.7l7.05-4.11c.54.5 1.25.81 2.04.81 1.66 0 3-1.34 3-3s-1.34-3-3-3-3 1.34-3 3c0 .24.04.47.09.7L8.04 9.81C7.5 9.31 6.79 9 6 9c-1.66 0-3 1.34-3 3s1.34 3 3 3c.79 0 1.5-.31 2.04-.81l7.12 4.16c-.05.21-.08.43-.08.65 0 1.61 1.31 2.92 2.92 2.92s2.92-1.31 2.92-2.92c0-1.61-1.31-2.92-2.92-2.92zM18 4c.55 0 1 .45 1 1s-.45 1-1 1-1-.45-1-1 .45-1 1-1zM6 13c-.55 0-1-.45-1-1s.45-1 1-1 1 .45 1 1-.45 1-1 1zm12 7.02c-.55 0-1-.45-1-1s.45-1 1-1 1 .45 1 1-.45 1-1 1z"/></svg>
         </button>
       </div>
-    </main>
+    </div>
+  </header>
+
+  <!-- ── Store info bar ──────────────────────────────────────────────────── -->
+  <div class="store-info-bar">
+    <div class="info-left">
+      <span class="dot-open"></span>
+      <span class="status-text">Aberto</span>
+      <span class="sep">•</span>
+      <span>Sem pedido mínimo</span>
+    </div>
+    <span class="profile-link">Perfil da loja</span>
+  </div>
+
+  <!-- ── Category nav ───────────────────────────────────────────────────── -->
+  <nav class="cat-nav" id="catNav">
+    <button class="cat-btn active" data-cat="destaques">Destaques</button>
+    <button class="cat-btn" data-cat="combos">Combos</button>
+    <button class="cat-btn" data-cat="minicombos">Mini Combos</button>
+    <button class="cat-btn" data-cat="trio">Trio Pizza</button>
+    <button class="cat-btn" data-cat="salgadas">Pizzas Variadas</button>
+    <button class="cat-btn" data-cat="metade">Pizza Metade</button>
+    <button class="cat-btn" data-cat="dividas">Dividas</button>
+    <button class="cat-btn" data-cat="doces">Pizzas Doces</button>
+    <button class="cat-btn" data-cat="bebidas">Refrigerantes</button>
+    <button class="cat-btn" data-cat="adicionais">Adicionais</button>
+  </nav>
+
+  <!-- ── Main ───────────────────────────────────────────────────────────── -->
+  <main class="menu-main">
+
+    <section class="menu-section" id="sec-destaques">
+      <h2 class="section-title">Destaques</h2>
+      <div class="featured-row" id="grid-destaques"></div>
+    </section>
+
+    <section class="menu-section" id="sec-combos">
+      <h2 class="section-title">Combos</h2>
+      <div class="product-list" id="list-combos"></div>
+    </section>
+
+    <section class="menu-section" id="sec-minicombos">
+      <div class="section-header-coll" data-target="list-minicombos">
+        <h2 class="section-title">Mini Combos</h2>
+        <svg class="chevron" viewBox="0 0 24 24" width="20" height="20"><path fill="currentColor" d="M7.41 8.59L12 13.17l4.59-4.58L18 10l-6 6-6-6 1.41-1.41z"/></svg>
+      </div>
+      <div class="product-list" id="list-minicombos"></div>
+    </section>
+
+    <section class="menu-section" id="sec-trio">
+      <div class="section-header-coll" data-target="list-trio">
+        <h2 class="section-title">Trio Pizza</h2>
+        <svg class="chevron" viewBox="0 0 24 24" width="20" height="20"><path fill="currentColor" d="M7.41 8.59L12 13.17l4.59-4.58L18 10l-6 6-6-6 1.41-1.41z"/></svg>
+      </div>
+      <div class="product-list" id="list-trio"></div>
+    </section>
+
+    <section class="menu-section" id="sec-salgadas">
+      <div class="section-header-coll" data-target="list-salgadas">
+        <h2 class="section-title">Apenas Pizzas Variadas 35cm</h2>
+        <svg class="chevron" viewBox="0 0 24 24" width="20" height="20"><path fill="currentColor" d="M7.41 8.59L12 13.17l4.59-4.58L18 10l-6 6-6-6 1.41-1.41z"/></svg>
+      </div>
+      <div class="product-list" id="list-salgadas"></div>
+    </section>
+
+    <section class="menu-section" id="sec-metade">
+      <div class="section-header-coll" data-target="list-metade">
+        <h2 class="section-title">Pizza Metade 35cm</h2>
+        <svg class="chevron" viewBox="0 0 24 24" width="20" height="20"><path fill="currentColor" d="M7.41 8.59L12 13.17l4.59-4.58L18 10l-6 6-6-6 1.41-1.41z"/></svg>
+      </div>
+      <div class="product-list" id="list-metade"></div>
+    </section>
+
+    <section class="menu-section" id="sec-dividas">
+      <div class="section-header-coll" data-target="list-dividas">
+        <h2 class="section-title">Pizzas Dividas 35cm</h2>
+        <svg class="chevron" viewBox="0 0 24 24" width="20" height="20"><path fill="currentColor" d="M7.41 8.59L12 13.17l4.59-4.58L18 10l-6 6-6-6 1.41-1.41z"/></svg>
+      </div>
+      <div class="product-list" id="list-dividas"></div>
+    </section>
+
+    <section class="menu-section" id="sec-doces">
+      <div class="section-header-coll" data-target="list-doces">
+        <h2 class="section-title">Pizzas Doces</h2>
+        <svg class="chevron" viewBox="0 0 24 24" width="20" height="20"><path fill="currentColor" d="M7.41 8.59L12 13.17l4.59-4.58L18 10l-6 6-6-6 1.41-1.41z"/></svg>
+      </div>
+      <div class="product-list" id="list-doces"></div>
+    </section>
+
+    <section class="menu-section" id="sec-bebidas">
+      <div class="section-header-coll" data-target="list-bebidas">
+        <h2 class="section-title">Refrigerantes</h2>
+        <svg class="chevron" viewBox="0 0 24 24" width="20" height="20"><path fill="currentColor" d="M7.41 8.59L12 13.17l4.59-4.58L18 10l-6 6-6-6 1.41-1.41z"/></svg>
+      </div>
+      <div class="product-list" id="list-bebidas"></div>
+    </section>
+
+    <section class="menu-section" id="sec-adicionais">
+      <div class="section-header-coll" data-target="list-adicionais">
+        <h2 class="section-title">Adicionais</h2>
+        <svg class="chevron" viewBox="0 0 24 24" width="20" height="20"><path fill="currentColor" d="M7.41 8.59L12 13.17l4.59-4.58L18 10l-6 6-6-6 1.41-1.41z"/></svg>
+      </div>
+      <div class="product-list" id="list-adicionais"></div>
+    </section>
+
+    <div class="menu-footer">
+      <p>🍕 Cardápio Digital • Superp Delivery</p>
+    </div>
+  </main>
+
+  <!-- ── Bottom navigation ─────────────────────────────────────────────── -->
+  <nav class="bottom-nav">
+    <button class="nav-btn active" id="navInicio">
+      <svg viewBox="0 0 24 24" width="22" height="22"><path fill="currentColor" d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></svg>
+      <span>Início</span>
+    </button>
+    <button class="nav-btn" id="navPedidos">
+      <svg viewBox="0 0 24 24" width="22" height="22"><path fill="currentColor" d="M9 11H7v2h2v-2zm4 0h-2v2h2v-2zm4 0h-2v2h2v-2zm2-7h-1V2h-2v2H8V2H6v2H5c-1.11 0-1.99.9-1.99 2L3 20c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 16H5V9h14v11z"/></svg>
+      <span>Pedidos</span>
+    </button>
+    <button class="nav-btn" id="navCarrinho">
+      <div class="cart-wrap">
+        <svg viewBox="0 0 24 24" width="22" height="22"><path fill="currentColor" d="M17 18c-1.1 0-1.99.9-1.99 2S15.9 22 17 22s2-.9 2-2-.9-2-2-2zM1 2v2h2l3.6 7.59-1.35 2.45c-.16.28-.25.61-.25.96C5 16.1 6.9 18 9 18h12v-2H9.42c-.14 0-.25-.11-.25-.25l.03-.12.9-1.63H19c.75 0 1.41-.41 1.75-1.03l3.58-6.49A1 1 0 0 0 23.45 5H5.21l-.94-2H1zm8 16c-1.1 0-1.99.9-1.99 2S7.9 22 9 22s2-.9 2-2-.9-2-2-2z"/></svg>
+        <span class="cart-badge" id="cartBadge">0</span>
+      </div>
+      <span>Carrinho</span>
+    </button>
+  </nav>
+
+  <!-- ── Cart Screen ───────────────────────────────────────────────────── -->
+  <div id="screenCart" class="screen">
+    <div class="screen-header">
+      <button class="screen-back-btn" id="cartScreenBack">
+        <svg viewBox="0 0 24 24" width="22" height="22"><path fill="currentColor" d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/></svg>
+        Cardápio
+      </button>
+      <h2 class="screen-title">Meu Pedido</h2>
+      <button class="screen-clear-btn" id="cartScreenClear">Limpar</button>
+    </div>
+    <div class="screen-body" id="cartScreenItems"></div>
+    <div class="screen-footer">
+      <button class="screen-advance-btn" id="cartScreenAdvance">Avançar</button>
+    </div>
+  </div>
+
+  <!-- ── Checkout Screen ────────────────────────────────────────────────── -->
+  <div id="screenCheckout" class="screen">
+    <div class="screen-header">
+      <button class="screen-back-btn" id="checkoutBack">
+        <svg viewBox="0 0 24 24" width="22" height="22"><path fill="currentColor" d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/></svg>
+        Carrinho
+      </button>
+      <h2 class="screen-title">Identificação</h2>
+      <div style="width:80px"></div>
+    </div>
+    <div class="screen-body checkout-form-body">
+      <p class="checkout-intro">Para finalizar, preencha seus dados:</p>
+      <div class="checkout-field">
+        <label class="checkout-label">Seu nome</label>
+        <input id="checkoutName" class="checkout-input" placeholder="Ex: João" autocomplete="given-name" />
+      </div>
+      <div class="checkout-field">
+        <label class="checkout-label">WhatsApp</label>
+        <input id="checkoutPhone" class="checkout-input" type="tel" placeholder="Ex: 11999999999" autocomplete="tel" inputmode="numeric" />
+      </div>
+    </div>
+    <div class="screen-footer">
+      <button class="screen-advance-btn" id="checkoutAdvance" disabled>Avançar</button>
+    </div>
+  </div>
+
+  <!-- Checkout confirmation popup -->
+  <div id="checkoutConfirm" class="popup-overlay hidden">
+    <div class="popup-card">
+      <h3 class="popup-title">Confirmar dados</h3>
+      <div id="confirmInfo" class="confirm-info"></div>
+      <button class="popup-btn-secondary" id="confirmEdit">Editar informações</button>
+      <button class="popup-btn-primary" id="confirmOk">Confirmar</button>
+    </div>
+  </div>
+
+  <!-- ── Finalize Screen ────────────────────────────────────────────────── -->
+  <div id="screenFinalize" class="screen">
+    <div class="screen-header">
+      <button class="screen-back-btn" id="finalizeBack">
+        <svg viewBox="0 0 24 24" width="22" height="22"><path fill="currentColor" d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/></svg>
+        Identificação
+      </button>
+      <h2 class="screen-title">Finalizar Pedido</h2>
+      <div style="width:100px"></div>
+    </div>
+    <div class="screen-body">
+      <div class="finalize-section">
+        <h4 class="finalize-section-title">Endereço de entrega</h4>
+        <input id="finalizeAddress" class="checkout-input" placeholder="Rua, número, bairro" autocomplete="street-address" />
+      </div>
+      <div class="finalize-section">
+        <h4 class="finalize-section-title">Forma de pagamento</h4>
+        <div class="pay-option selected" id="payPix">
+          <div class="pay-option-icon">💳</div>
+          <div class="pay-option-info">
+            <span class="pay-option-name">PIX</span>
+            <span class="pay-option-desc">Pagamento online instantâneo</span>
+          </div>
+          <span class="pay-badge">Selecionado</span>
+        </div>
+        <div class="pay-option pay-option-disabled">
+          <div class="pay-option-icon">💵</div>
+          <div class="pay-option-info">
+            <span class="pay-option-name">Pagar na entrega</span>
+            <span class="pay-option-desc">Dinheiro ou cartão</span>
+          </div>
+          <span class="pay-blocked">Indisponível</span>
+        </div>
+      </div>
+    </div>
+    <div class="screen-footer">
+      <button class="screen-advance-btn" id="finalizeAdvance" disabled>Ir para pagamento</button>
+    </div>
+  </div>
+
+  <!-- ── PIX Screen ─────────────────────────────────────────────────────── -->
+  <div id="screenPix" class="screen">
+
+    <!-- Cabeçalho -->
+    <div class="pix-header">
+      <button class="screen-back-btn" id="pixScreenBack">
+        <svg viewBox="0 0 24 24" width="22" height="22"><path fill="currentColor" d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/></svg>
+        Voltar
+      </button>
+      <span class="pix-header-title">Pagamento</span>
+      <div style="width:70px"></div>
+    </div>
+
+    <!-- Corpo com scroll -->
+    <div class="pix-screen-body">
+
+      <!-- Título + valor -->
+      <h2 class="pix-awaiting-title">Aguardando pagamento Pix...</h2>
+      <p class="pix-amount-display" id="pixAmountDisplay">R$ 0,00</p>
+
+      <!-- Timer circular -->
+      <div class="pix-timer-wrap">
+        <p class="pix-timer-label">Tempo restante</p>
+        <div class="pix-ring-wrap">
+          <svg class="pix-ring-svg" viewBox="0 0 130 130">
+            <circle class="pix-ring-bg" cx="65" cy="65" r="54"/>
+            <circle class="pix-ring-fg" cx="65" cy="65" r="54" id="pixRingProgress"/>
+          </svg>
+          <span class="pix-timer-num" id="countdown">05:00</span>
+        </div>
+      </div>
+
+      <!-- Pix copia e cola -->
+      <div class="pix-code-section">
+        <p class="pix-code-label">Pague com <strong>Pix copia e cola</strong> :</p>
+        <div class="pix-code-row">
+          <span class="pix-code-text" id="pixKey">Gerando PIX...</span>
+          <button class="pix-inline-copy" id="copyBtnInline" disabled>
+            <svg viewBox="0 0 24 24" width="18" height="18"><path fill="currentColor" d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z"/></svg>
+          </button>
+        </div>
+      </div>
+
+      <!-- Botões -->
+      <button class="pix-copy-btn" id="copyBtn" disabled>
+        <svg viewBox="0 0 24 24" width="18" height="18"><path fill="currentColor" d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z"/></svg>
+        <span id="copyLabel">Copiar código</span>
+      </button>
+      <button class="pix-paid-btn" id="pixPaidBtn">Já paguei</button>
+
+    </div>
+  </div>
+
+  <!-- ── Product Modal ────────────────────────────────────────────────── -->
+  <div class="modal-overlay" id="productModal">
+    <div class="modal-card product-modal-card">
+      <button class="pm-back-btn" id="productModalClose">
+        <svg viewBox="0 0 24 24" width="20" height="20"><path fill="currentColor" d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/></svg>
+        Voltar
+      </button>
+      <div class="pm-header" id="productModalHeader"></div>
+      <div class="pm-body" id="productModalBody"></div>
+      <!-- Footer: selecionando -->
+      <div class="pm-footer" id="pmFooterNormal">
+        <button class="pm-add-btn" id="productModalAddBtn" disabled>Adicionar</button>
+      </div>
+      <!-- Footer: após adicionar -->
+      <div class="pm-footer pm-footer-added hidden" id="pmFooterAdded">
+        <div class="pm-added-qty-row">
+          <button class="pm-added-qty-btn" id="pmQtyDec">−</button>
+          <span class="pm-added-qty-num" id="pmQtyNum">1</span>
+          <button class="pm-added-qty-btn" id="pmQtyInc">+</button>
+        </div>
+        <div class="pm-added-action-btns">
+          <button class="pm-continue-btn" id="pmContinueBtn">Continuar Comprando</button>
+          <button class="pm-advance-btn" id="pmAdvanceCartBtn">Avançar para o Carrinho</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Search overlay ────────────────────────────────────────────────── -->
+  <div class="search-overlay" id="searchOverlay">
+    <div class="search-header">
+      <input type="text" class="search-input" id="searchInput" placeholder="Buscar no cardápio..." />
+      <button class="search-close-btn" id="searchClose">✕</button>
+    </div>
+    <div class="search-results" id="searchResults"></div>
   </div>
 
   <script>
