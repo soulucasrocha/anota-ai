@@ -65,7 +65,7 @@ export default function FinalizeScreen({ active, address, onAddressChange, getCa
             Endereço de entrega
             {geoData && (
               <span className="finalize-geo-badge">
-                📍 {geoData.km}km de você
+                📍 3km de você
               </span>
             )}
           </h4>
