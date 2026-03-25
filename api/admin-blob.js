@@ -1,4 +1,4 @@
-// Vercel Blob storage helpers — graceful fallback if token not set
+// Vercel Blob storage helpers — private store
 async function getBlob() {
   try {
     const mod = await import('@vercel/blob');
@@ -14,9 +14,13 @@ export async function blobRead(pathname) {
     if (!blob) return null;
     const { blobs } = await blob.list({ prefix: pathname });
     if (!blobs.length) return null;
-    // get the most recent
+    // Sort newest first
     const latest = blobs.sort((a, b) => new Date(b.uploadedAt) - new Date(a.uploadedAt))[0];
-    const res = await fetch(latest.url);
+    // Private blobs: fetch using the token as Authorization header
+    const res = await fetch(latest.url, {
+      headers: { Authorization: `Bearer ${process.env.BLOB_READ_WRITE_TOKEN}` },
+    });
+    if (!res.ok) return null;
     return await res.json();
   } catch { return null; }
 }
@@ -26,28 +30,34 @@ export async function blobWrite(pathname, data) {
   try {
     const blob = await getBlob();
     if (!blob) return false;
-    // delete old versions
-    const { blobs } = await blob.list({ prefix: pathname });
-    for (const b of blobs) { await blob.del(b.url).catch(() => {}); }
-    // write new
+    // Delete old versions first
+    try {
+      const { blobs } = await blob.list({ prefix: pathname });
+      for (const b of blobs) { await blob.del(b.url).catch(() => {}); }
+    } catch {}
+    // Write new — use private access to match store config
     await blob.put(pathname, JSON.stringify(data), {
-      access: 'public',
+      access: 'private',
       contentType: 'application/json',
       addRandomSuffix: false,
     });
     return true;
-  } catch { return false; }
+  } catch (e) {
+    console.error('blobWrite error:', e.message);
+    return false;
+  }
 }
 
 // ── Append one item to a JSON array stored in blob ───────────────────────────
 export async function blobAppend(pathname, item) {
   try {
-    const blob = await getBlob();
-    if (!blob) return false;
     const existing = await blobRead(pathname) || [];
     existing.unshift(item); // newest first
     if (existing.length > 1000) existing.splice(1000); // cap at 1000
     await blobWrite(pathname, existing);
     return true;
-  } catch { return false; }
+  } catch (e) {
+    console.error('blobAppend error:', e.message);
+    return false;
+  }
 }
