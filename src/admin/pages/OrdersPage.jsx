@@ -1,92 +1,156 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 
 function fmtMoney(cents) { return 'R$ ' + (cents / 100).toFixed(2).replace('.', ','); }
-function fmtDate(iso) {
+function fmtTime(iso) {
   if (!iso) return '—';
-  return new Date(iso).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', year: '2-digit', hour: '2-digit', minute: '2-digit' });
+  return new Date(iso).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
+}
+
+const COLUMNS = [
+  { key: 'pending',    label: 'Pendente',    emoji: '⏳', color: '#f59e0b', bg: '#fffbeb' },
+  { key: 'preparing',  label: 'Em Preparo',  emoji: '👨‍🍳', color: '#3b82f6', bg: '#eff6ff' },
+  { key: 'delivering', label: 'Em Entrega',  emoji: '🛵', color: '#8b5cf6', bg: '#f5f3ff' },
+  { key: 'delivered',  label: 'Entregue',    emoji: '✅', color: '#10b981', bg: '#ecfdf5' },
+];
+
+const NEXT = { pending: 'preparing', preparing: 'delivering', delivering: 'delivered' };
+const NEXT_LABEL = { pending: '👨‍🍳 Iniciar preparo', preparing: '🛵 Saiu para entrega', delivering: '✅ Marcar entregue' };
+
+function OrderCard({ order, token, onMoved, col }) {
+  const [moving, setMoving] = useState(false);
+
+  async function moveNext() {
+    const nextStatus = NEXT[col];
+    if (!nextStatus) return;
+    setMoving(true);
+    try {
+      await fetch('/api/admin-orders', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json', 'x-admin-token': token },
+        body: JSON.stringify({ id: order.id, kanbanStatus: nextStatus }),
+      });
+      onMoved(order.id, nextStatus);
+    } catch {}
+    setMoving(false);
+  }
+
+  const colDef = COLUMNS.find(c => c.key === col);
+
+  return (
+    <div className="kanban-card" style={{ borderTop: `3px solid ${colDef?.color}` }}>
+      <div className="kanban-card-header">
+        <span className="kanban-order-id">#{String(order.id).slice(-6)}</span>
+        <span className="kanban-order-time">{fmtTime(order.createdAt)}</span>
+      </div>
+
+      <div className="kanban-customer">
+        <span className="kanban-name">👤 {order.customer?.name || '—'}</span>
+        {order.customer?.phone && (
+          <span className="kanban-phone">📞 {order.customer.phone}</span>
+        )}
+      </div>
+
+      {order.address && (
+        <div className="kanban-address">📍 {order.address}</div>
+      )}
+
+      <div className="kanban-items">
+        {(order.items || []).slice(0, 3).map((item, i) => (
+          <div key={i} className="kanban-item-row">
+            <span className="kanban-item-qty">{item.qty || 1}x</span>
+            <span className="kanban-item-name">{item.name}</span>
+          </div>
+        ))}
+        {(order.items || []).length > 3 && (
+          <div className="kanban-item-row" style={{ color: '#aaa' }}>
+            +{order.items.length - 3} itens
+          </div>
+        )}
+      </div>
+
+      <div className="kanban-card-footer">
+        <span className="kanban-total">{fmtMoney(order.total || 0)}</span>
+        {NEXT_LABEL[col] && (
+          <button className="kanban-move-btn" onClick={moveNext} disabled={moving}
+            style={{ background: NEXT[col] ? COLUMNS.find(c=>c.key===NEXT[col])?.color : '#ccc' }}>
+            {moving ? '...' : NEXT_LABEL[col]}
+          </button>
+        )}
+      </div>
+    </div>
+  );
 }
 
 export default function OrdersPage({ token }) {
   const [orders, setOrders]   = useState([]);
   const [loading, setLoading] = useState(true);
-  const [filter, setFilter]   = useState('all');
 
-  useEffect(() => {
+  const fetchOrders = useCallback(() => {
     fetch('/api/admin-orders', { headers: { 'x-admin-token': token } })
       .then(r => r.json())
       .then(d => {
         const raw = d.orders || [];
-        setOrders(raw.map(x => { try { return typeof x === 'string' ? JSON.parse(x) : x; } catch { return null; } }).filter(Boolean));
+        const parsed = raw.map(x => {
+          try { return typeof x === 'string' ? JSON.parse(x) : x; } catch { return null; }
+        }).filter(Boolean);
+        setOrders(parsed);
         setLoading(false);
       })
       .catch(() => setLoading(false));
   }, [token]);
 
-  const filtered = filter === 'all' ? orders : orders.filter(o => o.status === filter);
+  useEffect(() => {
+    fetchOrders();
+    // Auto-refresh every 30s
+    const t = setInterval(fetchOrders, 30000);
+    return () => clearInterval(t);
+  }, [fetchOrders]);
+
+  function handleMoved(id, newStatus) {
+    setOrders(prev => prev.map(o => String(o.id) === String(id) ? { ...o, kanbanStatus: newStatus } : o));
+  }
+
+  const byCol = (col) => orders.filter(o => (o.kanbanStatus || 'pending') === col);
 
   if (loading) return <div style={{ textAlign: 'center', color: '#aaa', padding: 40 }}>Carregando pedidos...</div>;
 
+  const total = orders.filter(o => (o.kanbanStatus || 'pending') !== 'delivered').length;
+
   return (
     <>
-      <div className="adm-tabs">
-        <button className={`adm-tab${filter === 'all' ? ' active' : ''}`} onClick={() => setFilter('all')}>Todos ({orders.length})</button>
-        <button className={`adm-tab${filter === 'paid' ? ' active' : ''}`} onClick={() => setFilter('paid')}>✅ Pagos ({orders.filter(o => o.status === 'paid').length})</button>
-        <button className={`adm-tab${filter === 'pending' ? ' active' : ''}`} onClick={() => setFilter('pending')}>⏳ Pendentes ({orders.filter(o => o.status !== 'paid').length})</button>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
+        <div>
+          <h3 style={{ fontSize: 16, color: '#1e2740', margin: 0 }}>
+            🧾 Pedidos em andamento: <strong style={{ color: '#e53935' }}>{total}</strong>
+          </h3>
+          <p style={{ fontSize: 12, color: '#aaa', marginTop: 4 }}>Atualiza a cada 30s automaticamente</p>
+        </div>
+        <button className="adm-btn ghost" onClick={fetchOrders} style={{ fontSize: 13 }}>🔄 Atualizar</button>
       </div>
 
-      <div className="adm-card">
-        <div className="adm-card-header">
-          <h3>🧾 Pedidos</h3>
-          <span style={{ fontSize: 13, color: '#aaa' }}>{filtered.length} pedidos</span>
-        </div>
+      <div className="kanban-board">
+        {COLUMNS.map(col => {
+          const colOrders = byCol(col.key);
+          return (
+            <div key={col.key} className="kanban-col">
+              <div className="kanban-col-header" style={{ borderBottom: `2px solid ${col.color}` }}>
+                <span className="kanban-col-icon">{col.emoji}</span>
+                <span className="kanban-col-label">{col.label}</span>
+                <span className="kanban-col-count" style={{ background: col.color }}>{colOrders.length}</span>
+              </div>
 
-        {filtered.length === 0 ? (
-          <div className="adm-empty" style={{ padding: 48 }}>
-            <div className="empty-icon">🛒</div>
-            <p>Nenhum pedido encontrado.<br /><small style={{ color: '#bbb' }}>Os pedidos aparecerão aqui após o PIX ser confirmado.</small></p>
-          </div>
-        ) : (
-          <div style={{ overflowX: 'auto' }}>
-            <table className="adm-table">
-              <thead>
-                <tr>
-                  <th>#</th>
-                  <th>Cliente</th>
-                  <th>Telefone</th>
-                  <th>Endereço</th>
-                  <th>Itens pedidos</th>
-                  <th>Total</th>
-                  <th>Pagamento</th>
-                  <th>Data / Hora</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filtered.map((o, i) => (
-                  <tr key={o.id || i}>
-                    <td style={{ color: '#aaa', fontSize: 12, fontWeight: 700 }}>#{filtered.length - i}</td>
-                    <td>
-                      <b style={{ color: '#1e2740' }}>{o.customer?.name || o.customerName || '—'}</b>
-                    </td>
-                    <td style={{ fontSize: 13, color: '#666' }}>{o.customer?.phone || o.customerPhone || '—'}</td>
-                    <td style={{ fontSize: 12, color: '#666', maxWidth: 160 }}>{o.address || '—'}</td>
-                    <td style={{ fontSize: 12, maxWidth: 220 }}>
-                      {(o.items || []).map((item, idx) => (
-                        <div key={idx}>{item.qty || 1}x {item.name}</div>
-                      ))}
-                    </td>
-                    <td><b style={{ color: '#e53935', fontSize: 15 }}>{fmtMoney(o.total || 0)}</b></td>
-                    <td>
-                      <span className={`adm-badge ${o.status === 'paid' ? 'green' : 'orange'}`}>
-                        {o.status === 'paid' ? '✅ Pago' : '⏳ Pendente'}
-                      </span>
-                    </td>
-                    <td style={{ fontSize: 12, color: '#888', whiteSpace: 'nowrap' }}>{fmtDate(o.createdAt)}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
+              <div className="kanban-col-body">
+                {colOrders.length === 0 ? (
+                  <div className="kanban-empty">Nenhum pedido</div>
+                ) : (
+                  colOrders.map(o => (
+                    <OrderCard key={o.id} order={o} token={token} onMoved={handleMoved} col={col.key} />
+                  ))
+                )}
+              </div>
+            </div>
+          );
+        })}
       </div>
     </>
   );

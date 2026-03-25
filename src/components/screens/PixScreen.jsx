@@ -37,7 +37,20 @@ async function sendCapiPurchase(value, orderId) {
 
 // ────────────────────────────────────────────────────────────────────────────
 
-export default function PixScreen({ active, amount, customer, deliveryAddress, onBack, onPaid, showToast }) {
+async function saveOrderToDashboard({ pixId, cart, amount, customer, address }) {
+  try {
+    const items = Object.values(cart || {}).map(({ item, qty }) => ({
+      id: item.id, name: item.name, qty, price: item.price,
+    }));
+    await fetch('/api/order-save', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ pixId, items, total: amount, customer, address, status: 'paid' }),
+    });
+  } catch (e) { console.warn('order-save:', e); }
+}
+
+export default function PixScreen({ active, amount, cart, customer, deliveryAddress, onBack, onPaid, showToast }) {
   const [pixKey, setPixKey]       = useState('Gerando PIX...');
   const [ready, setReady]         = useState(false);
   const [copyState, setCopyState] = useState('idle');
@@ -88,6 +101,14 @@ export default function PixScreen({ active, amount, customer, deliveryAddress, o
           sendUtmifyOrder(id, 'paid', amountRef.current, approvedDate, customerData);
           firePixelPurchase(amountRef.current, id);
           sendCapiPurchase(amountRef.current, id);
+          // ── Save order to admin dashboard ──────────────────────────────────
+          saveOrderToDashboard({
+            pixId: id,
+            cart,
+            amount: amountRef.current,
+            customer,
+            address: deliveryAddress,
+          });
           setPaid(true);
         }
         if (data.status === 'expired' || data.status === 'cancelled') {

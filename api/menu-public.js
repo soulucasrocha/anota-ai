@@ -6,8 +6,9 @@ const ORDER = ['destaques','combos','minicombos','trio','salgadas','metade','div
 export default async function handler(req, res) {
   if (req.method !== 'GET') return res.status(405).end();
 
-  // Cache for 10 seconds on CDN
-  res.setHeader('Cache-Control', 's-maxage=10, stale-while-revalidate=30');
+  // No cache — admin edits must appear immediately
+  res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate');
+  res.setHeader('Pragma', 'no-cache');
 
   try {
     const products = await blobRead('data/products.json');
