@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { MENU } from '../data/menu'
+import { MENU as STATIC_MENU } from '../data/menu'
 import { fmtPrice } from '../utils/helpers'
 
 function FeatCard({ item, onClick }) {
@@ -65,33 +65,38 @@ function CollapsibleSection({ id, title, items, onItemClick }) {
   );
 }
 
-export default function MenuMain({ onItemClick }) {
+export default function MenuMain({ onItemClick, menu: propMenu }) {
+  const M = propMenu || STATIC_MENU;
   return (
     <main className="menu-main">
-      <section className="menu-section" id="sec-destaques">
-        <h2 className="section-title">Destaques</h2>
-        <div className="featured-row">
-          {MENU.destaques.map(item => (
-            <FeatCard key={item.id} item={item} onClick={onItemClick} />
-          ))}
-        </div>
-      </section>
+      {M.destaques?.length > 0 && (
+        <section className="menu-section" id="sec-destaques">
+          <h2 className="section-title">Destaques</h2>
+          <div className="featured-row">
+            {M.destaques.map(item => (
+              <FeatCard key={item.id} item={item} onClick={onItemClick} />
+            ))}
+          </div>
+        </section>
+      )}
 
-      <section className="menu-section" id="sec-combos">
-        <h2 className="section-title">Combos</h2>
-        <div className="product-list">
-          {MENU.combos.map(item => <ProdItem key={item.id} item={item} onClick={onItemClick} />)}
-        </div>
-      </section>
+      {M.combos?.length > 0 && (
+        <section className="menu-section" id="sec-combos">
+          <h2 className="section-title">Combos</h2>
+          <div className="product-list">
+            {M.combos.map(item => <ProdItem key={item.id} item={item} onClick={onItemClick} />)}
+          </div>
+        </section>
+      )}
 
-      <CollapsibleSection id="minicombos" title="Mini Combos"                    items={MENU.minicombos}  onItemClick={onItemClick} />
-      <CollapsibleSection id="trio"       title="Trio Pizza"                     items={MENU.trio}        onItemClick={onItemClick} />
-      <CollapsibleSection id="salgadas"   title="Apenas Pizzas Variadas 35cm"    items={MENU.salgadas}    onItemClick={onItemClick} />
-      <CollapsibleSection id="metade"     title="Pizza Metade 35cm"              items={MENU.metade}      onItemClick={onItemClick} />
-      <CollapsibleSection id="dividas"    title="Pizzas Dividas 35cm"            items={MENU.dividas}     onItemClick={onItemClick} />
-      <CollapsibleSection id="doces"      title="Pizzas Doces"                   items={MENU.doces}       onItemClick={onItemClick} />
-      <CollapsibleSection id="bebidas"    title="Refrigerantes"                  items={MENU.bebidas}     onItemClick={onItemClick} />
-      <CollapsibleSection id="adicionais" title="Adicionais"                     items={MENU.adicionais}  onItemClick={onItemClick} />
+      {M.minicombos?.length > 0  && <CollapsibleSection id="minicombos" title="Mini Combos"                 items={M.minicombos}  onItemClick={onItemClick} />}
+      {M.trio?.length > 0        && <CollapsibleSection id="trio"       title="Trio Pizza"                  items={M.trio}        onItemClick={onItemClick} />}
+      {M.salgadas?.length > 0    && <CollapsibleSection id="salgadas"   title="Apenas Pizzas Variadas 35cm" items={M.salgadas}    onItemClick={onItemClick} />}
+      {M.metade?.length > 0      && <CollapsibleSection id="metade"     title="Pizza Metade 35cm"           items={M.metade}      onItemClick={onItemClick} />}
+      {M.dividas?.length > 0     && <CollapsibleSection id="dividas"    title="Pizzas Dividas 35cm"         items={M.dividas}     onItemClick={onItemClick} />}
+      {M.doces?.length > 0       && <CollapsibleSection id="doces"      title="Pizzas Doces"                items={M.doces}       onItemClick={onItemClick} />}
+      {M.bebidas?.length > 0     && <CollapsibleSection id="bebidas"    title="Refrigerantes"               items={M.bebidas}     onItemClick={onItemClick} />}
+      {M.adicionais?.length > 0  && <CollapsibleSection id="adicionais" title="Adicionais"                  items={M.adicionais}  onItemClick={onItemClick} />}
 
       <div className="menu-footer">
         <p>🍕 Cardápio Digital • Superp Delivery</p>

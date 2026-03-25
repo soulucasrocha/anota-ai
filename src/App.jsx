@@ -31,6 +31,15 @@ export default function App() {
   const [confirmOpen, setConfirmOpen]           = useState(false);
   const [address, setAddress]                   = useState('');
   const [geoData, setGeoData]                   = useState(null);
+  const [dynamicMenu, setDynamicMenu]           = useState(null);
+
+  // ── Dynamic menu (from admin blob) ────────────────────────────────────────
+  useEffect(() => {
+    fetch('/api/menu-public')
+      .then(r => r.json())
+      .then(d => { if (d.menu) setDynamicMenu(d.menu); })
+      .catch(() => {}); // silently fall back to static menu
+  }, []);
 
   // ── Geolocation ───────────────────────────────────────────────────────────
   useEffect(() => {
@@ -116,7 +125,7 @@ export default function App() {
       <StoreInfoBar />
       <CategoryNav />
       <DeliveryBanner geoData={geoData} />
-      <MenuMain onItemClick={handleItemClick} />
+      <MenuMain onItemClick={handleItemClick} menu={dynamicMenu} />
 
       <CartBar
         cartCount={getCartCount()}

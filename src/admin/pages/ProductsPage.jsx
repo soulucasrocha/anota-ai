@@ -34,7 +34,7 @@ export default function ProductsPage({ token }) {
     setForm({
       id: p.id, category: p.category || 'salgadas', name: p.name, desc: p.desc || '',
       price: (p.price / 100).toFixed(2), oldPrice: p.oldPrice ? (p.oldPrice / 100).toFixed(2) : '',
-      tag: p.tag || '', img: p.img || '', active: p.active !== false,
+      tag: p.tag || '', img: p.img || '', active: p.active !== false, _steps: p.steps || null,
     });
     setEditId(p.id);
     setTab('form');
@@ -42,18 +42,19 @@ export default function ProductsPage({ token }) {
   }
 
   function resetForm() {
-    setForm({ id: '', category: 'salgadas', name: '', desc: '', price: '', oldPrice: '', tag: '', img: '', active: true });
+    setForm({ id: '', category: 'salgadas', name: '', desc: '', price: '', oldPrice: '', tag: '', img: '', active: true, _steps: null });
     setEditId(null);
   }
 
   async function handleSave(e) {
     e.preventDefault();
     setSaving(true);
+    const { _steps, ...rest } = form;
     const payload = {
-      ...form,
+      ...rest,
       id: editId || undefined,
-      price: Math.round(parseFloat(form.price) * 100),
-      oldPrice: form.oldPrice ? Math.round(parseFloat(form.oldPrice) * 100) : undefined,
+      price: form.price,       // API handles conversion (cents)
+      oldPrice: form.oldPrice || undefined,
     };
     try {
       const res = await fetch('/api/admin-products', {
