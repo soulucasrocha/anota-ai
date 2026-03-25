@@ -24,7 +24,7 @@ export default async function handler(req, res) {
     // Test write
     try {
       await blobMod.put('test/ping.json', JSON.stringify({ ts: Date.now() }), {
-        access: 'public', addRandomSuffix: false, contentType: 'application/json'
+        access: 'private', addRandomSuffix: false, contentType: 'application/json'
       });
       result.writeOk = true;
     } catch (e) {
