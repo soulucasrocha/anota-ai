@@ -23,12 +23,13 @@ export default async function handler(req, res) {
     return res.status(200).json({ ok: true, store });
   }
 
-  // PATCH — update store (name, logo_url, whatsapp, hours)
+  // PATCH — update store (name, slug, logo_url, whatsapp, hours)
   if (req.method === 'PATCH') {
-    const { id, name, logo_url, whatsapp, hours } = req.body || {};
+    const { id, name, slug, logo_url, whatsapp, hours } = req.body || {};
     if (!id) return res.status(400).json({ error: 'missing id' });
     const updates = {};
     if (name     !== undefined) updates.name      = name;
+    if (slug     !== undefined) updates.slug      = slug.toLowerCase().replace(/[^a-z0-9-]/g, '-').replace(/-+/g, '-');
     if (logo_url !== undefined) updates.logo_url  = logo_url;
     if (whatsapp !== undefined) updates.whatsapp  = whatsapp;
     if (hours    !== undefined) updates.hours     = hours;

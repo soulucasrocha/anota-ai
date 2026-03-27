@@ -55,7 +55,7 @@ export default function StoreProfilePage({ token, storeId, store, onUpdated }) {
       await fetch('/api/admin-stores', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json', 'x-admin-token': token },
-        body: JSON.stringify({ id: storeId, name, logo_url: logoUrl, whatsapp, hours }),
+        body: JSON.stringify({ id: storeId, name, slug, logo_url: logoUrl, whatsapp, hours }),
       });
       setSaved(true);
       setTimeout(() => setSaved(false), 2000);
