@@ -1,10 +1,11 @@
 import { useState } from 'react';
 
 export default function StoreProfilePage({ token, storeId, store, onUpdated }) {
-  const [name,    setName]    = useState(store?.name     || '');
-  const [logoUrl, setLogoUrl] = useState(store?.logo_url || '');
-  const [saving,  setSaving]  = useState(false);
-  const [saved,   setSaved]   = useState(false);
+  const [name,      setName]      = useState(store?.name      || '');
+  const [logoUrl,   setLogoUrl]   = useState(store?.logo_url  || '');
+  const [whatsapp,  setWhatsapp]  = useState(store?.whatsapp  || '');
+  const [saving,    setSaving]    = useState(false);
+  const [saved,     setSaved]     = useState(false);
 
   async function save() {
     setSaving(true);
@@ -12,7 +13,7 @@ export default function StoreProfilePage({ token, storeId, store, onUpdated }) {
       await fetch('/api/admin-stores', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json', 'x-admin-token': token },
-        body: JSON.stringify({ id: storeId, name, logo_url: logoUrl }),
+        body: JSON.stringify({ id: storeId, name, logo_url: logoUrl, whatsapp }),
       });
       setSaved(true);
       setTimeout(() => setSaved(false), 2000);
@@ -42,6 +43,20 @@ export default function StoreProfilePage({ token, storeId, store, onUpdated }) {
           <label className="adm-label">URL do logo (imagem)</label>
           <input className="adm-input" value={logoUrl} onChange={e => setLogoUrl(e.target.value)} placeholder="https://..." />
           {logoUrl && <img src={logoUrl} alt="Logo" style={{ marginTop: 8, height: 60, borderRadius: 8, objectFit: 'contain', background: '#f5f5f5', padding: 4 }} onError={e => e.target.style.display='none'} />}
+        </div>
+        <div>
+          <label className="adm-label">WhatsApp da loja</label>
+          <input
+            className="adm-input"
+            value={whatsapp}
+            onChange={e => setWhatsapp(e.target.value.replace(/\D/g, ''))}
+            placeholder="Ex: 11999998888 (só números, com DDD)"
+            maxLength={15}
+          />
+          <p style={{ fontSize: 12, color: '#aaa', marginTop: 4 }}>
+            Número com DDD, sem espaços ou símbolos. Ex: <b>11999998888</b><br/>
+            Aparece como botão "Falar com a loja" no pedido do cliente.
+          </p>
         </div>
         {storeFrontUrl && (
           <div style={{ background: '#f0fdf4', border: '1px solid #86efac', borderRadius: 10, padding: 12 }}>

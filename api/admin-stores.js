@@ -23,13 +23,14 @@ export default async function handler(req, res) {
     return res.status(200).json({ ok: true, store });
   }
 
-  // PATCH — update store (name, logo_url)
+  // PATCH — update store (name, logo_url, whatsapp)
   if (req.method === 'PATCH') {
-    const { id, name, logo_url } = req.body || {};
+    const { id, name, logo_url, whatsapp } = req.body || {};
     if (!id) return res.status(400).json({ error: 'missing id' });
     const updates = {};
-    if (name      !== undefined) updates.name     = name;
-    if (logo_url  !== undefined) updates.logo_url = logo_url;
+    if (name     !== undefined) updates.name      = name;
+    if (logo_url !== undefined) updates.logo_url  = logo_url;
+    if (whatsapp !== undefined) updates.whatsapp  = whatsapp;
     const { error } = await sb().from('stores').update(updates).eq('id', id);
     if (error) return res.status(500).json({ error: error.message });
     return res.status(200).json({ ok: true });

@@ -105,6 +105,7 @@ export default function App() {
   const [storeId, setStoreId]                   = useState(null);
   const [storeName, setStoreName]               = useState('');
   const [storeLogoUrl, setStoreLogoUrl]         = useState('');
+  const [storeWhatsapp, setStoreWhatsapp]       = useState('');
   const [paymentMethod, setPaymentMethod]       = useState(() => _s?.paymentMethod || 'pix_online');
   const [deliveryOrderId, setDeliveryOrderId]   = useState(() => _s?.deliveryOrderId || null);
 
@@ -129,6 +130,7 @@ export default function App() {
         if (d.storeId) setStoreId(d.storeId);
         if (d.storeName) setStoreName(d.storeName);
         if (d.storeLogoUrl) setStoreLogoUrl(d.storeLogoUrl);
+        if (d.storeWhatsapp) setStoreWhatsapp(d.storeWhatsapp);
       })
       .catch(() => {}); // silently fall back to static menu
   }, [slug]);
@@ -344,9 +346,12 @@ export default function App() {
         active={screen === 'delivery-waiting'}
         orderId={deliveryOrderId}
         amount={getCartTotal()}
+        cart={cart}
         customer={{ name: checkoutName, phone: checkoutPhone }}
         deliveryAddress={address}
         paymentMethod={paymentMethod}
+        storeWhatsapp={storeWhatsapp}
+        storeName={storeName}
         onBack={() => setScreen('finalize')}
         onDone={() => { clearCart(); setScreen(null); }}
       />

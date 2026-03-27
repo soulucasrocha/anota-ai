@@ -24,7 +24,7 @@ export default async function handler(req, res) {
 
     // Get store info + payment methods in parallel
     const [{ data: storeInfo }, { data: settings }] = await Promise.all([
-      sb().from('stores').select('name, logo_url').eq('id', storeId).maybeSingle(),
+      sb().from('stores').select('name, logo_url, whatsapp').eq('id', storeId).maybeSingle(),
       sb().from('store_settings').select('payment_methods').eq('store_id', storeId).maybeSingle(),
     ]);
     const paymentMethods = settings?.payment_methods || { pix_online: true, card_online: false, card_delivery: false, pix_delivery: false, cash: false };
@@ -32,7 +32,7 @@ export default async function handler(req, res) {
     // Get products
     const { data: products } = await sb().from('products').select('id,category,name,description,price,old_price,tag,img,active,sold_out,steps').eq('store_id', storeId).eq('active', true);
 
-    const storeMeta = { storeName: storeInfo?.name || '', storeLogoUrl: storeInfo?.logo_url || '' };
+    const storeMeta = { storeName: storeInfo?.name || '', storeLogoUrl: storeInfo?.logo_url || '', storeWhatsapp: storeInfo?.whatsapp || '' };
 
     if (!products || !products.length) {
       return res.status(200).json({ source: 'static', paymentMethods, storeId, ...storeMeta });
