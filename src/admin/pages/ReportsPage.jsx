@@ -24,23 +24,24 @@ function BarChart({ data }) {
   );
 }
 
-export default function ReportsPage({ token }) {
+export default function ReportsPage({ token, storeId }) {
   const [stats, setStats]   = useState(null);
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [tab, setTab]       = useState('resumo');
 
   useEffect(() => {
+    if (!storeId) return;
     Promise.all([
-      fetch('/api/admin-stats',  { headers: { 'x-admin-token': token } }).then(r => r.json()),
-      fetch('/api/admin-orders', { headers: { 'x-admin-token': token } }).then(r => r.json()),
+      fetch(`/api/admin-stats?storeId=${storeId}`,  { headers: { 'x-admin-token': token } }).then(r => r.json()),
+      fetch('/api/admin-orders', { headers: { 'x-admin-token': token, 'x-store-id': storeId } }).then(r => r.json()),
     ]).then(([s, o]) => {
       setStats(s);
       const raw = o.orders || [];
       setOrders(raw.map(x => { try { return typeof x === 'string' ? JSON.parse(x) : x; } catch { return null; } }).filter(Boolean));
       setLoading(false);
     }).catch(() => setLoading(false));
-  }, [token]);
+  }, [token, storeId]);
 
   if (loading) return <div style={{ textAlign: 'center', color: '#aaa', padding: 40 }}>Carregando relatórios...</div>;
 
@@ -180,7 +181,7 @@ export default function ReportsPage({ token }) {
                       <td style={{ fontSize: 12, maxWidth: 200 }}>{(o.items || []).map(i => `${i.qty || 1}x ${i.name}`).join(', ').slice(0, 60) || '—'}</td>
                       <td><b style={{ color: '#e53935' }}>{fmtMoney(o.total || 0)}</b></td>
                       <td><span className={`adm-badge ${o.status === 'paid' ? 'green' : 'orange'}`}>{o.status === 'paid' ? 'Pago' : 'Pendente'}</span></td>
-                      <td style={{ fontSize: 12, color: '#888', whiteSpace: 'nowrap' }}>{fmtDate(o.createdAt)}</td>
+                      <td style={{ fontSize: 12, color: '#888', whiteSpace: 'nowrap' }}>{fmtDate(o.created_at || o.createdAt)}</td>
                     </tr>
                   ))}
                 </tbody>

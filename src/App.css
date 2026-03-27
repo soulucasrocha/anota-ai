@@ -930,6 +930,38 @@ body {
 }
 .pix-new-key-btn:hover { background: var(--red-dk); }
 
+/* QR Code */
+.pix-qr-wrap {
+  display: flex; flex-direction: column; align-items: center;
+  padding: 0 20px 4px;
+  gap: 10px;
+}
+.pix-qr-img {
+  width: 220px; height: 220px;
+  border: 2px solid #e8001d;
+  border-radius: 12px;
+  padding: 8px;
+  background: #fff;
+  display: block;
+}
+.pix-qr-placeholder {
+  width: 220px; height: 220px;
+  border: 2px dashed #ddd;
+  border-radius: 12px;
+  display: flex; align-items: center; justify-content: center;
+}
+.pix-qr-spinner {
+  width: 36px; height: 36px;
+  border: 3px solid #eee;
+  border-top-color: #e8001d;
+  border-radius: 50%;
+  animation: spin .8s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+.pix-qr-hint {
+  font-size: 12px; color: #888; text-align: center; margin: 0;
+}
+
 /* ─── Delivery Banner ────────────────────────────────────────────────────── */
 .delivery-banner {
   display: flex; align-items: center; gap: 8px;
@@ -979,6 +1011,42 @@ body {
 }
 .finalize-geo-hint { font-size: 12px; color: var(--text-sec); margin-top: 6px; padding-left: 2px; }
 .tracking-address-text { padding: 12px 14px; font-size: 13.5px; color: var(--text); line-height: 1.4; }
+
+/* ─── Finalize Delivery Info ────────────────────────────────────────────── */
+.finalize-delivery-info {
+  background: #fff8f0; border-radius: 12px;
+  padding: 14px 16px; border: 1px solid #ffe0c0;
+}
+.finalize-delivery-text {
+  font-size: 13px; color: #666; margin: 0 0 10px; text-align: center;
+}
+.finalize-delivery-logos {
+  display: flex; align-items: center; justify-content: center;
+  gap: 10px; flex-wrap: wrap;
+}
+.finalize-delivery-partner {
+  display: flex; align-items: center; gap: 6px;
+  font-size: 13px; font-weight: 700; color: #333;
+}
+.finalize-partner-logo { height: 22px; width: auto; object-fit: contain; }
+.finalize-partner-logo-99 { height: 20px; }
+.finalize-delivery-or { font-size: 12px; color: #999; }
+
+/* ─── Delivery Waiting Banner ───────────────────────────────────────────── */
+.delivery-waiting-banner {
+  display: flex; align-items: flex-start; gap: 14px;
+  background: #fffbeb; border: 1.5px solid #fde68a;
+  border-radius: 12px; padding: 14px 16px;
+  margin: 0 16px 12px;
+}
+.delivery-waiting-spinner {
+  width: 22px; height: 22px;
+  border: 3px solid #fde68a; border-top-color: #f59e0b;
+  border-radius: 50%; animation: spin 0.9s linear infinite;
+  flex-shrink: 0; margin-top: 2px;
+}
+.delivery-waiting-title { margin: 0; font-size: 14px; font-weight: 700; color: #92400e; }
+.delivery-waiting-sub   { margin: 4px 0 0; font-size: 12px; color: #b45309; }
 
 /* ─── Order Tracking Screen (iFood style) ───────────────────────────────── */
 .tracking-screen { background: #f5f5f5; }
@@ -1089,6 +1157,16 @@ body {
   padding: 4px 0;
 }
 
+.tracking-share-btn {
+  display: flex; align-items: center; justify-content: center; gap: 8px;
+  width: calc(100% - 32px); margin: 0 16px 12px;
+  background: #fff; border: 1.5px solid #e0e0e0; border-radius: 12px;
+  cursor: pointer; color: #555; font-size: 14px; font-weight: 600;
+  padding: 13px 16px; transition: background .15s, color .15s, border-color .15s;
+}
+.tracking-share-btn:hover { background: #f5f5f5; }
+.tracking-share-btn.copied { background: #ecfdf5; color: #10b981; border-color: #10b981; }
+
 .tracking-contact-btn {
   display: flex; align-items: center; justify-content: center; gap: 6px;
   width: calc(100% - 32px); margin: 0 16px;
@@ -1144,4 +1222,88 @@ body {
   font-size: 15px;
   font-weight: 700;
   white-space: nowrap;
+}
+
+/* ── PIX back confirmation popup ─────────────────────────────────────────── */
+.pix-back-overlay {
+  position: fixed; inset: 0; z-index: 600;
+  background: rgba(0,0,0,.55);
+  display: flex; align-items: flex-end; justify-content: center;
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+.pix-back-popup {
+  background: #fff;
+  border-radius: 20px 20px 0 0;
+  padding: 28px 24px 32px;
+  width: 100%; max-width: 480px;
+  text-align: center;
+  animation: slideUp .25s ease;
+}
+@keyframes slideUp {
+  from { transform: translateY(100%); }
+  to   { transform: translateY(0); }
+}
+.pix-back-popup-icon { font-size: 36px; margin-bottom: 12px; }
+.pix-back-popup-title {
+  font-size: 18px; font-weight: 800; color: #1a1a1a;
+  margin-bottom: 10px;
+}
+.pix-back-popup-text {
+  font-size: 14px; color: #555; line-height: 1.55;
+  margin-bottom: 22px;
+}
+.pix-back-popup-text strong { color: #1a1a1a; }
+.pix-back-popup-cancel {
+  width: 100%; padding: 14px;
+  background: #fee2e2; color: #dc2626;
+  border: none; border-radius: 12px;
+  font-size: 15px; font-weight: 700;
+  cursor: pointer; margin-bottom: 10px;
+  transition: background .15s;
+}
+.pix-back-popup-cancel:hover { background: #fecaca; }
+.pix-back-popup-keep {
+  width: 100%; padding: 14px;
+  background: var(--red); color: #fff;
+  border: none; border-radius: 12px;
+  font-size: 15px; font-weight: 700;
+  cursor: pointer;
+  transition: background .15s;
+}
+.pix-back-popup-keep:hover { background: var(--red-dk); }
+
+/* ── PIX order summary ───────────────────────────────────────────────────── */
+.pix-summary {
+  width: 100%; margin-top: 20px;
+  border: 1.5px solid #e5e7eb;
+  border-radius: 14px; overflow: hidden;
+}
+.pix-summary-header {
+  padding: 13px 16px;
+  background: #f9fafb;
+  font-size: 14px; font-weight: 700; color: #1a1a1a;
+  border-bottom: 1px solid #e5e7eb;
+}
+.pix-summary-body {
+  padding: 8px 16px 14px;
+  background: #fff;
+}
+.pix-summary-row {
+  display: flex; align-items: center;
+  gap: 8px; padding: 7px 0;
+  border-bottom: 1px solid #f3f4f6;
+  font-size: 13px;
+}
+.pix-summary-row:last-of-type { border-bottom: none; }
+.pix-summary-qty {
+  min-width: 28px; font-weight: 700;
+  color: var(--red); font-size: 13px;
+}
+.pix-summary-name { flex: 1; color: #374151; }
+.pix-summary-price { font-weight: 700; color: #1a1a1a; white-space: nowrap; }
+.pix-summary-total {
+  display: flex; justify-content: space-between;
+  align-items: center; padding-top: 10px;
+  font-size: 15px; font-weight: 800; color: #1a1a1a;
+  border-top: 1.5px solid #e5e7eb; margin-top: 4px;
 }

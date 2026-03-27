@@ -14,10 +14,19 @@ const COLUMNS = [
 ];
 
 const NEXT = { pending: 'preparing', preparing: 'delivering', delivering: 'delivered' };
-const NEXT_LABEL = { pending: '👨‍🍳 Iniciar preparo', preparing: '🛵 Saiu para entrega', delivering: '✅ Marcar entregue' };
+const NEXT_LABEL = { pending: '👨‍🍳 Aceitar e preparar', preparing: '🛵 Saiu para entrega', delivering: '✅ Marcar entregue' };
 
-function OrderCard({ order, token, onMoved, col }) {
-  const [moving, setMoving] = useState(false);
+const PM_LABEL = {
+  pix_online:    { icon: '⚡', label: 'PIX Online',        color: '#6366f1' },
+  card_online:   { icon: '💳', label: 'Cartão Online',     color: '#3b82f6' },
+  card_delivery: { icon: '💳', label: 'Cartão na Entrega', color: '#f59e0b' },
+  pix_delivery:  { icon: '📱', label: 'PIX na Entrega',    color: '#8b5cf6' },
+  cash:          { icon: '💵', label: 'Dinheiro',          color: '#10b981' },
+};
+
+function OrderCard({ order, token, storeId, onMoved, onFinalized, col }) {
+  const [moving,    setMoving]    = useState(false);
+  const [finishing, setFinishing] = useState(false);
 
   async function moveNext() {
     const nextStatus = NEXT[col];
@@ -26,12 +35,24 @@ function OrderCard({ order, token, onMoved, col }) {
     try {
       await fetch('/api/admin-orders', {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json', 'x-admin-token': token },
+        headers: { 'Content-Type': 'application/json', 'x-admin-token': token, 'x-store-id': storeId || '' },
         body: JSON.stringify({ id: order.id, kanbanStatus: nextStatus }),
       });
       onMoved(order.id, nextStatus);
     } catch {}
     setMoving(false);
+  }
+
+  async function finalize() {
+    setFinishing(true);
+    try {
+      await fetch(`/api/admin-orders?id=${order.id}&storeId=${storeId || ''}`, {
+        method: 'DELETE',
+        headers: { 'x-admin-token': token, 'x-store-id': storeId || '' },
+      });
+      onFinalized(order.id);
+    } catch {}
+    setFinishing(false);
   }
 
   const colDef = COLUMNS.find(c => c.key === col);
@@ -40,7 +61,7 @@ function OrderCard({ order, token, onMoved, col }) {
     <div className="kanban-card" style={{ borderTop: `3px solid ${colDef?.color}` }}>
       <div className="kanban-card-header">
         <span className="kanban-order-id">#{String(order.id).slice(-6)}</span>
-        <span className="kanban-order-time">{fmtTime(order.createdAt)}</span>
+        <span className="kanban-order-time">{fmtTime(order.created_at || order.createdAt)}</span>
       </div>
 
       <div className="kanban-customer">
@@ -53,6 +74,15 @@ function OrderCard({ order, token, onMoved, col }) {
       {order.address && (
         <div className="kanban-address">📍 {order.address}</div>
       )}
+
+      {(order.payment_method || order.paymentMethod) && (() => {
+        const pm = PM_LABEL[order.payment_method || order.paymentMethod];
+        return pm ? (
+          <div className="kanban-payment-badge" style={{ color: pm.color }}>
+            {pm.icon} {pm.label}
+          </div>
+        ) : null;
+      })()}
 
       <div className="kanban-items">
         {(order.items || []).slice(0, 3).map((item, i) => (
@@ -70,23 +100,32 @@ function OrderCard({ order, token, onMoved, col }) {
 
       <div className="kanban-card-footer">
         <span className="kanban-total">{fmtMoney(order.total || 0)}</span>
-        {NEXT_LABEL[col] && (
-          <button className="kanban-move-btn" onClick={moveNext} disabled={moving}
-            style={{ background: NEXT[col] ? COLUMNS.find(c=>c.key===NEXT[col])?.color : '#ccc' }}>
-            {moving ? '...' : NEXT_LABEL[col]}
-          </button>
-        )}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+          {NEXT_LABEL[col] && (
+            <button className="kanban-move-btn" onClick={moveNext} disabled={moving}
+              style={{ background: NEXT[col] ? COLUMNS.find(c=>c.key===NEXT[col])?.color : '#ccc' }}>
+              {moving ? '...' : NEXT_LABEL[col]}
+            </button>
+          )}
+          {col === 'delivered' && (
+            <button className="kanban-move-btn" onClick={finalize} disabled={finishing}
+              style={{ background: '#6b7280', fontSize: 12 }}>
+              {finishing ? '...' : '🗑️ Finalizar e remover'}
+            </button>
+          )}
+        </div>
       </div>
     </div>
   );
 }
 
-export default function OrdersPage({ token }) {
+export default function OrdersPage({ token, storeId }) {
   const [orders, setOrders]   = useState([]);
   const [loading, setLoading] = useState(true);
 
   const fetchOrders = useCallback(() => {
-    fetch('/api/admin-orders', { headers: { 'x-admin-token': token } })
+    if (!storeId) return;
+    fetch('/api/admin-orders', { headers: { 'x-admin-token': token, 'x-store-id': storeId } })
       .then(r => r.json())
       .then(d => {
         const raw = d.orders || [];
@@ -97,7 +136,7 @@ export default function OrdersPage({ token }) {
         setLoading(false);
       })
       .catch(() => setLoading(false));
-  }, [token]);
+  }, [token, storeId]);
 
   useEffect(() => {
     fetchOrders();
@@ -107,14 +146,19 @@ export default function OrdersPage({ token }) {
   }, [fetchOrders]);
 
   function handleMoved(id, newStatus) {
-    setOrders(prev => prev.map(o => String(o.id) === String(id) ? { ...o, kanbanStatus: newStatus } : o));
+    setOrders(prev => prev.map(o => String(o.id) === String(id) ? { ...o, kanban_status: newStatus, kanbanStatus: newStatus } : o));
   }
 
-  const byCol = (col) => orders.filter(o => (o.kanbanStatus || 'pending') === col);
+  function handleFinalized(id) {
+    setOrders(prev => prev.filter(o => String(o.id) !== String(id)));
+  }
+
+  const getKanbanStatus = (o) => o.kanban_status || o.kanbanStatus || 'pending';
+  const byCol = (col) => orders.filter(o => getKanbanStatus(o) === col);
 
   if (loading) return <div style={{ textAlign: 'center', color: '#aaa', padding: 40 }}>Carregando pedidos...</div>;
 
-  const total = orders.filter(o => (o.kanbanStatus || 'pending') !== 'delivered').length;
+  const total = orders.filter(o => getKanbanStatus(o) !== 'delivered').length;
 
   return (
     <>
@@ -144,7 +188,7 @@ export default function OrdersPage({ token }) {
                   <div className="kanban-empty">Nenhum pedido</div>
                 ) : (
                   colOrders.map(o => (
-                    <OrderCard key={o.id} order={o} token={token} onMoved={handleMoved} col={col.key} />
+                    <OrderCard key={o.id} order={o} token={token} storeId={storeId} onMoved={handleMoved} onFinalized={handleFinalized} col={col.key} />
                   ))
                 )}
               </div>

@@ -11,15 +11,41 @@ function useDebounce(value, delay) {
   return debouncedValue;
 }
 
-export default function FinalizeScreen({ active, address, onAddressChange, getCartTotal, onBack, onAdvance, geoData }) {
+const PM_INFO = {
+  pix_online:    { icon: '⚡', label: 'PIX Online',       desc: 'Pagamento instantâneo', online: true },
+  card_online:   { icon: '💳', label: 'Cartão Online',    desc: 'Crédito/débito online', online: true },
+  card_delivery: { icon: '💳', label: 'Cartão na Entrega',desc: 'Pague ao receber',      online: false },
+  pix_delivery:  { icon: '📱', label: 'PIX na Entrega',   desc: 'Pague ao receber',      online: false },
+  cash:          { icon: '💵', label: 'Dinheiro',         desc: 'Dinheiro ao receber',   online: false },
+};
+
+export default function FinalizeScreen({ active, address, onAddressChange, getCartTotal, onBack, onAdvance, geoData, slug }) {
   const total      = getCartTotal();
   const hasAddress = address.trim().length > 0;
 
   const [suggestions, setSuggestions] = useState([]);
   const [showSugg,    setShowSugg]    = useState(false);
   const [searching,   setSearching]   = useState(false);
+  const [payMethods,  setPayMethods]  = useState({ pix_online: true });
+  const [selectedPay, setSelectedPay] = useState('pix_online');
   const debouncedAddress = useDebounce(address, 500);
   const inputRef = useRef(null);
+
+  // Fetch payment methods
+  useEffect(() => {
+    if (!active) return;
+    fetch(`/api/menu-public${slug ? `?slug=${slug}` : ''}`)
+      .then(r => r.json())
+      .then(d => {
+        if (d.paymentMethods) {
+          setPayMethods(d.paymentMethods);
+          // Auto-select first enabled method
+          const first = Object.keys(PM_INFO).find(k => d.paymentMethods[k]);
+          if (first) setSelectedPay(first);
+        }
+      })
+      .catch(() => {});
+  }, [active, slug]);
 
   // Autocomplete
   useEffect(() => {
@@ -48,6 +74,15 @@ export default function FinalizeScreen({ active, address, onAddressChange, getCa
     inputRef.current?.blur();
   }, [onAddressChange]);
 
+  const enabledMethods = Object.keys(PM_INFO).filter(k => payMethods[k]);
+
+  const btnLabel = () => {
+    if (!hasAddress) return 'Informe o endereço';
+    const info = PM_INFO[selectedPay];
+    if (info?.online) return `Ir para pagamento • ${fmtPrice(total)}`;
+    return `Confirmar pedido • ${fmtPrice(total)}`;
+  };
+
   return (
     <div className={'screen' + (active ? ' active' : '')}>
       <div className="screen-header">
@@ -60,16 +95,12 @@ export default function FinalizeScreen({ active, address, onAddressChange, getCa
       </div>
 
       <div className="screen-body">
+        {/* Endereço */}
         <div className="finalize-section">
           <h4 className="finalize-section-title">
             Endereço de entrega
-            {geoData && (
-              <span className="finalize-geo-badge">
-                📍 3km de você
-              </span>
-            )}
+            {geoData && <span className="finalize-geo-badge">📍 3km de você</span>}
           </h4>
-
           <div className="address-autocomplete-wrap">
             <input
               ref={inputRef}
@@ -82,7 +113,6 @@ export default function FinalizeScreen({ active, address, onAddressChange, getCa
               onBlur={() => setTimeout(() => setShowSugg(false), 150)}
             />
             {searching && <span className="address-searching">🔍</span>}
-
             {showSugg && suggestions.length > 0 && (
               <ul className="address-suggestions">
                 {suggestions.map((s, i) => (
@@ -96,29 +126,64 @@ export default function FinalizeScreen({ active, address, onAddressChange, getCa
               </ul>
             )}
           </div>
-
           {geoData?.shortAddress && address === geoData.shortAddress && (
             <p className="finalize-geo-hint">📍 Endereço detectado automaticamente</p>
           )}
         </div>
 
+        {/* Forma de pagamento */}
         <div className="finalize-section">
           <h4 className="finalize-section-title">Forma de pagamento</h4>
-          <div className="pay-option selected">
-            <div className="pay-option-icon">💳</div>
-            <div className="pay-option-info">
-              <span className="pay-option-name">PIX</span>
-              <span className="pay-option-desc">Pagamento online instantâneo</span>
-            </div>
-            <span className="pay-badge">Selecionado</span>
-          </div>
-          <div className="pay-option pay-option-disabled">
-            <div className="pay-option-icon">💵</div>
-            <div className="pay-option-info">
-              <span className="pay-option-name">Pagar na entrega</span>
-              <span className="pay-option-desc">Dinheiro ou cartão</span>
-            </div>
-            <span className="pay-blocked">Indisponível</span>
+          {enabledMethods.length === 0 ? (
+            <p style={{ fontSize: 13, color: '#aaa' }}>Nenhuma forma de pagamento disponível.</p>
+          ) : (
+            enabledMethods.map(key => {
+              const info = PM_INFO[key];
+              const sel  = selectedPay === key;
+              return (
+                <div
+                  key={key}
+                  className={'pay-option' + (sel ? ' selected' : '')}
+                  onClick={() => setSelectedPay(key)}
+                  style={{ cursor: 'pointer' }}
+                >
+                  <div className="pay-option-icon">{info.icon}</div>
+                  <div className="pay-option-info">
+                    <span className="pay-option-name">{info.label}</span>
+                    <span className="pay-option-desc">{info.desc}</span>
+                  </div>
+                  {sel && <span className="pay-badge">Selecionado</span>}
+                </div>
+              );
+            })
+          )}
+        </div>
+
+        {/* Informações de entrega */}
+        <div className="finalize-section finalize-delivery-info">
+          <p className="finalize-delivery-text">
+            Nossas entregas são terceirizadas, as entregas são feitas pela
+          </p>
+          <div className="finalize-delivery-logos">
+            <span className="finalize-delivery-partner">
+              <img
+                src="https://logodownload.org/wp-content/uploads/2017/05/ifood-logo.png"
+                alt="iFood"
+                className="finalize-partner-logo"
+                onError={e => { e.target.style.display='none'; }}
+              />
+              iFood
+            </span>
+            <span className="finalize-delivery-or">ou pela</span>
+            <span className="finalize-delivery-partner">
+              <img
+                src="https://upload.wikimedia.org/wikipedia/commons/thumb/3/37/99_Logo.svg/512px-99_Logo.svg.png"
+                alt="99food"
+                className="finalize-partner-logo finalize-partner-logo-99"
+                onError={e => { e.target.style.display='none'; }}
+              />
+              99food
+            </span>
           </div>
         </div>
       </div>
@@ -126,10 +191,10 @@ export default function FinalizeScreen({ active, address, onAddressChange, getCa
       <div className="screen-footer">
         <button
           className="screen-advance-btn"
-          disabled={!hasAddress}
-          onClick={hasAddress ? onAdvance : undefined}
+          disabled={!hasAddress || enabledMethods.length === 0}
+          onClick={() => hasAddress && onAdvance(selectedPay)}
         >
-          {hasAddress ? `Ir para pagamento • ${fmtPrice(total)}` : 'Ir para pagamento'}
+          {btnLabel()}
         </button>
       </div>
     </div>

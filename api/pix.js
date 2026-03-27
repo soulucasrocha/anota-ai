@@ -43,8 +43,12 @@ export default async function handler(req, res) {
     });
 
     const data = await response.json();
+    if (!response.ok) {
+      console.error('[pix] Veno error', response.status, JSON.stringify(data));
+    }
     res.status(response.ok ? 200 : response.status).json(data);
   } catch (e) {
-    res.status(500).json({ error: 'Internal server error' });
+    console.error('[pix] fetch error:', e.message);
+    res.status(500).json({ error: 'Internal server error', detail: e.message });
   }
 }

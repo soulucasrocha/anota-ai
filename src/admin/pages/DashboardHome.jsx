@@ -26,16 +26,17 @@ function BarChart({ data }) {
   );
 }
 
-export default function DashboardHome({ token }) {
+export default function DashboardHome({ token, storeId }) {
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetch('/api/admin-stats', { headers: { 'x-admin-token': token } })
+    if (!storeId) return;
+    fetch(`/api/admin-stats?storeId=${storeId}`, { headers: { 'x-admin-token': token } })
       .then(r => r.json())
       .then(d => { setStats(d); setLoading(false); })
       .catch(() => setLoading(false));
-  }, [token]);
+  }, [token, storeId]);
 
   if (loading) return <div style={{ padding: 40, textAlign: 'center', color: '#aaa' }}>Carregando...</div>;
 

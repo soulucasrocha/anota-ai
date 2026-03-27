@@ -4,7 +4,7 @@ const CATS = ['destaques','combos','minicombos','trio','salgadas','metade','divi
 
 function fmtMoney(cents) { return 'R$ ' + (cents / 100).toFixed(2).replace('.', ','); }
 
-export default function ProductsPage({ token }) {
+export default function ProductsPage({ token, storeId }) {
   const [products, setProducts] = useState([]);
   const [loading, setLoading]   = useState(true);
   const [tab, setTab]           = useState('list');
@@ -21,14 +21,15 @@ export default function ProductsPage({ token }) {
   function showToast(msg) { setToast(msg); setTimeout(() => setToast(''), 3000); }
 
   function fetchProducts() {
+    if (!storeId) return;
     setLoading(true);
-    fetch('/api/admin-products', { headers: { 'x-admin-token': token } })
+    fetch(`/api/admin-products?storeId=${storeId}`, { headers: { 'x-admin-token': token } })
       .then(r => r.json())
       .then(d => { setProducts(d.products || []); setLoading(false); })
       .catch(() => setLoading(false));
   }
 
-  useEffect(() => { fetchProducts(); }, [token]);
+  useEffect(() => { fetchProducts(); }, [token, storeId]);
 
   function startEdit(p) {
     setForm({
@@ -57,10 +58,10 @@ export default function ProductsPage({ token }) {
       oldPrice: form.oldPrice || undefined,
     };
     try {
-      const res = await fetch('/api/admin-products', {
+      const res = await fetch(`/api/admin-products?storeId=${storeId}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'x-admin-token': token },
-        body: JSON.stringify(payload),
+        body: JSON.stringify({ ...payload, storeId }),
       });
       const data = await res.json();
       if (data.ok) {
@@ -78,7 +79,7 @@ export default function ProductsPage({ token }) {
   async function handleDelete(id) {
     if (!confirm('Remover este produto?')) return;
     try {
-      await fetch(`/api/admin-products?id=${id}`, {
+      await fetch(`/api/admin-products?id=${id}&storeId=${storeId}`, {
         method: 'DELETE',
         headers: { 'x-admin-token': token },
       });

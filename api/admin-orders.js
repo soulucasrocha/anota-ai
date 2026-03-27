@@ -1,33 +1,28 @@
-import { verifyAdminToken } from './admin-verify.js';
-import { blobRead, blobAppend, blobWrite } from './admin-blob.js';
+import { verifyAdminToken } from './_verify.js';
+import { sb } from './_supabase.js';
 
 export default async function handler(req, res) {
   if (!verifyAdminToken(req)) return res.status(401).json({ error: 'Unauthorized' });
 
-  // ── GET: list orders ───────────────────────────────────────────────────────
+  const storeId = req.query.storeId || req.body?.storeId || req.headers['x-store-id'];
+  if (!storeId) return res.status(400).json({ error: 'missing storeId' });
+
   if (req.method === 'GET') {
-    const orders = await blobRead('data/orders.json') || [];
-    return res.status(200).json({ orders });
+    const { data } = await sb().from('orders').select('*').eq('store_id', storeId).eq('finalized', false).order('created_at', { ascending: false });
+    return res.status(200).json({ orders: data || [] });
   }
 
-  // ── POST: save new order ───────────────────────────────────────────────────
-  if (req.method === 'POST') {
-    const order = { ...req.body, id: req.body.id || Date.now(), createdAt: req.body.createdAt || new Date().toISOString() };
-    await blobAppend('data/orders.json', order);
-    return res.status(200).json({ ok: true, order });
-  }
-
-  // ── PATCH: update kanban status ────────────────────────────────────────────
   if (req.method === 'PATCH') {
     const { id, kanbanStatus } = req.body || {};
     if (!id || !kanbanStatus) return res.status(400).json({ error: 'missing id or kanbanStatus' });
-    const orders = await blobRead('data/orders.json') || [];
-    const idx = orders.findIndex(o => String(o.id) === String(id));
-    if (idx >= 0) {
-      orders[idx].kanbanStatus = kanbanStatus;
-      orders[idx].updatedAt = new Date().toISOString();
-      await blobWrite('data/orders.json', orders);
-    }
+    await sb().from('orders').update({ kanban_status: kanbanStatus, updated_at: new Date().toISOString() }).eq('id', String(id)).eq('store_id', storeId);
+    return res.status(200).json({ ok: true });
+  }
+
+  if (req.method === 'DELETE') {
+    const { id } = req.query;
+    if (!id) return res.status(400).json({ error: 'missing id' });
+    await sb().from('orders').update({ finalized: true, finalized_at: new Date().toISOString() }).eq('id', String(id)).eq('store_id', storeId);
     return res.status(200).json({ ok: true });
   }
 

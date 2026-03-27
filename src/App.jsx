@@ -1,4 +1,5 @@
 import { useState, useCallback, useEffect, useRef } from 'react'
+import { useParams } from 'react-router-dom'
 import { persistUtms } from './utils/utmify'
 import { getUserGeo } from './utils/geo'
 import Header from './components/Header'
@@ -11,35 +12,122 @@ import CartScreen from './components/screens/CartScreen'
 import CheckoutScreen from './components/screens/CheckoutScreen'
 import FinalizeScreen from './components/screens/FinalizeScreen'
 import PixScreen from './components/screens/PixScreen'
+import DeliveryWaitingScreen from './components/screens/DeliveryWaitingScreen'
 import ProductModal from './components/modals/ProductModal'
 import CheckoutConfirmPopup from './components/modals/CheckoutConfirmPopup'
 import CartBar from './components/CartBar'
 import DeliveryBanner from './components/DeliveryBanner'
 
+// ── Persistência de sessão ─────────────────────────────────────────────────
+const SESSION_KEY = 'app_session_v2';
+
+function loadSession() {
+  try {
+    const raw = localStorage.getItem(SESSION_KEY);
+    if (!raw) return null;
+    const d = JSON.parse(raw);
+    if (Date.now() > (d.expiry || 0)) { localStorage.removeItem(SESSION_KEY); return null; }
+    return d;
+  } catch { return null; }
+}
+
+function saveSession(data) {
+  try {
+    localStorage.setItem(SESSION_KEY, JSON.stringify({
+      ...data,
+      expiry: Date.now() + 24 * 60 * 60 * 1000,
+    }));
+  } catch {}
+}
+
 export default function App() {
+  const { slug } = useParams();
   useEffect(() => { persistUtms(); }, []);
 
-  const [screen, setScreen]       = useState(null);
-  const [cart, setCart]           = useState({});
+  // Carrega sessão salva para restaurar estado após refresh
+  const _s = loadSession();
+
+  const [screen, setScreenRaw]    = useState(() => {
+    // 0. URL param ?d=<orderId> — delivery order tracking link
+    try {
+      const dId = new URLSearchParams(window.location.search).get('d');
+      if (dId) {
+        // Save delivery order for tracking
+        const existing = localStorage.getItem('delivery_order_v1');
+        if (!existing) {
+          localStorage.setItem('delivery_order_v1', JSON.stringify({ orderId: dId, expiry: Date.now() + 86400000 }));
+        }
+        try { window.history.replaceState({}, '', window.location.pathname); } catch {}
+        return 'delivery-waiting';
+      }
+    } catch {}
+    // 1. Delivery order tracking in localStorage
+    try {
+      const raw = localStorage.getItem('delivery_order_v1');
+      if (raw) { const d = JSON.parse(raw); if (Date.now() < d.expiry) return 'delivery-waiting'; }
+    } catch {}
+    // 2. URL param ?t=<pixId> — link de rastreamento compartilhável
+    try {
+      const tId = new URLSearchParams(window.location.search).get('t');
+      if (tId) {
+        // Injeta rastreamento mínimo para o PixScreen restaurar a tela de tracking
+        const existing = localStorage.getItem('pix_tracking_v1');
+        if (!existing) {
+          localStorage.setItem('pix_tracking_v1', JSON.stringify({
+            pixId: tId,
+            expiry: Date.now() + 86400000,
+          }));
+        }
+        // Limpa o param da URL sem reload
+        try { window.history.replaceState({}, '', window.location.pathname); } catch {}
+        return 'pix';
+      }
+    } catch {}
+    // 3. PIX tracking salvo (pós-pagamento) tem prioridade
+    try {
+      const raw = localStorage.getItem('pix_tracking_v1');
+      if (raw) { const d = JSON.parse(raw); if (Date.now() < d.expiry) return 'pix'; }
+    } catch {}
+    return _s?.screen || null;
+  });
+  const [cart, setCart]           = useState(() => _s?.cart || {});
   const lastAddedKeyRef           = useRef(null);
   const [toast, setToast]         = useState(null);
   const toastTimerRef             = useRef(null);
   const [productModalItem, setProductModalItem] = useState(null);
   const [searchOpen, setSearchOpen]             = useState(false);
-  const [checkoutName, setCheckoutName]         = useState('');
-  const [checkoutPhone, setCheckoutPhone]       = useState('');
+  const [checkoutName, setCheckoutName]         = useState(() => _s?.checkoutName || '');
+  const [checkoutPhone, setCheckoutPhone]       = useState(() => _s?.checkoutPhone || '');
   const [confirmOpen, setConfirmOpen]           = useState(false);
-  const [address, setAddress]                   = useState('');
+  const [address, setAddress]                   = useState(() => _s?.address || '');
   const [geoData, setGeoData]                   = useState(null);
   const [dynamicMenu, setDynamicMenu]           = useState(null);
+  const [storeId, setStoreId]                   = useState(null);
+  const [paymentMethod, setPaymentMethod]       = useState(() => _s?.paymentMethod || 'pix_online');
+  const [deliveryOrderId, setDeliveryOrderId]   = useState(() => _s?.deliveryOrderId || null);
+
+  // Wrapper de setScreen que salva na sessão
+  const setScreen = useCallback((s) => {
+    setScreenRaw(s);
+  }, []);
+
+  // Salva sessão sempre que estado relevante muda
+  useEffect(() => {
+    if (screen === 'pix') return; // PIX tem própria persistência
+    saveSession({ screen, cart, checkoutName, checkoutPhone, address, paymentMethod, deliveryOrderId });
+  }, [screen, cart, checkoutName, checkoutPhone, address, paymentMethod, deliveryOrderId]);
 
   // ── Dynamic menu (from admin blob) ────────────────────────────────────────
   useEffect(() => {
-    fetch('/api/menu-public')
+    const params = slug ? `?slug=${slug}` : '';
+    fetch(`/api/menu-public${params}`)
       .then(r => r.json())
-      .then(d => { if (d.menu) setDynamicMenu(d.menu); })
+      .then(d => {
+        if (d.menu) setDynamicMenu(d.menu);
+        if (d.storeId) setStoreId(d.storeId);
+      })
       .catch(() => {}); // silently fall back to static menu
-  }, []);
+  }, [slug]);
 
   // ── Geolocation ───────────────────────────────────────────────────────────
   useEffect(() => {
@@ -95,7 +183,10 @@ export default function App() {
     });
   }, []);
 
-  const clearCart = useCallback(() => setCart({}), []);
+  const clearCart = useCallback(() => {
+    setCart({});
+    try { localStorage.removeItem(SESSION_KEY); } catch {}
+  }, []);
 
   // ── Toast ─────────────────────────────────────────────────────────────────
 
@@ -116,6 +207,41 @@ export default function App() {
       showToast('Adicionado ao carrinho ✅');
     }
   }, [addToCart, showToast]);
+
+  // ── Delivery order handler ─────────────────────────────────────────────────
+
+  const handleDeliveryOrder = useCallback(async (method) => {
+    const items = Object.values(cart).map(({ item, qty }) => ({ id: item.id, name: item.name, qty, price: item.price }));
+    const orderId = `del-${Date.now()}`;
+    try {
+      await fetch('/api/order-save', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          pixId: orderId,
+          items,
+          total: getCartTotal(),
+          customer: { name: checkoutName, phone: checkoutPhone },
+          address,
+          paymentMethod: method,
+          deliveryPayment: true,
+          storeId: storeId || undefined,
+        }),
+      });
+    } catch {}
+    // Save to localStorage for persistence
+    try {
+      localStorage.setItem('delivery_order_v1', JSON.stringify({
+        orderId,
+        amount: getCartTotal(),
+        paymentMethod: method,
+        expiry: Date.now() + 86400000,
+      }));
+    } catch {}
+    setDeliveryOrderId(orderId);
+    setPaymentMethod(method);
+    setScreen('delivery-waiting');
+  }, [cart, getCartTotal, checkoutName, checkoutPhone, address, setScreen]);
 
   // ─────────────────────────────────────────────────────────────────────────
 
@@ -177,8 +303,17 @@ export default function App() {
         onAddressChange={setAddress}
         getCartTotal={getCartTotal}
         onBack={() => setScreen('checkout')}
-        onAdvance={() => setScreen('pix')}
+        onAdvance={(method) => {
+          setPaymentMethod(method);
+          const isOnline = method === 'pix_online' || method === 'card_online';
+          if (isOnline) {
+            setScreen('pix');
+          } else {
+            handleDeliveryOrder(method);
+          }
+        }}
         geoData={geoData}
+        slug={slug}
       />
 
       <PixScreen
@@ -187,9 +322,22 @@ export default function App() {
         cart={cart}
         customer={{ name: checkoutName, phone: checkoutPhone }}
         deliveryAddress={address}
-        onBack={() => setScreen('finalize')}
+        paymentMethod={paymentMethod}
+        storeId={storeId}
+        onBack={() => setScreen('cart')}
         onPaid={() => { clearCart(); setScreen(null); }}
         showToast={showToast}
+      />
+
+      <DeliveryWaitingScreen
+        active={screen === 'delivery-waiting'}
+        orderId={deliveryOrderId}
+        amount={getCartTotal()}
+        customer={{ name: checkoutName, phone: checkoutPhone }}
+        deliveryAddress={address}
+        paymentMethod={paymentMethod}
+        onBack={() => setScreen('finalize')}
+        onDone={() => { clearCart(); setScreen(null); }}
       />
 
       <ProductModal

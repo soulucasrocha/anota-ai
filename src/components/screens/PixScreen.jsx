@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
+import QRCode from 'qrcode'
 import { fmtPrice } from '../../utils/helpers'
 import { getUtms, sendUtmifyOrder } from '../../utils/utmify'
 
@@ -37,7 +38,7 @@ async function sendCapiPurchase(value, orderId) {
 
 // ────────────────────────────────────────────────────────────────────────────
 
-async function saveOrderToDashboard({ pixId, cart, amount, customer, address }) {
+async function saveOrderToDashboard({ pixId, cart, amount, customer, address, storeId }) {
   try {
     const items = Object.values(cart || {}).map(({ item, qty }) => ({
       id: item.id, name: item.name, qty, price: item.price,
@@ -45,33 +46,100 @@ async function saveOrderToDashboard({ pixId, cart, amount, customer, address }) 
     await fetch('/api/order-save', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ pixId, items, total: amount, customer, address, status: 'paid' }),
+      body: JSON.stringify({ pixId, items, total: amount, customer, address, status: 'paid', storeId: storeId || undefined }),
     });
   } catch (e) { console.warn('order-save:', e); }
 }
 
-export default function PixScreen({ active, amount, cart, customer, deliveryAddress, onBack, onPaid, showToast }) {
-  const [pixKey, setPixKey]       = useState('Gerando PIX...');
-  const [ready, setReady]         = useState(false);
-  const [copyState, setCopyState] = useState('idle');
-  const [countdown, setCountdown] = useState(TOTAL_SECS);
-  const [expired, setExpired]     = useState(false);
-  const [paid, setPaid]           = useState(false);
+// ── Status do pedido em tempo real ───────────────────────────────────────────
+const STATUS_INFO = {
+  pending:    { dots: 1, text: 'Pedido recebido! Será preparado em breve ⏳' },
+  preparing:  { dots: 1, text: 'O pedido está sendo preparado 👨‍🍳' },
+  delivering: { dots: 2, text: 'Seu pedido saiu para entrega! 🛵' },
+  delivered:  { dots: 3, text: 'Pedido entregue com sucesso! ✅' },
+};
 
-  const countdownRef = useRef(null);
-  const pollRef      = useRef(null);
-  const pixIdRef     = useRef(null);
-  const amountRef    = useRef(amount);
+const LS_KEY         = 'pix_tracking_v1';
+const LS_PENDING_KEY = 'pix_pending_v1';
+
+function saveTracking(data) {
+  try { localStorage.setItem(LS_KEY, JSON.stringify({ ...data, expiry: Date.now() + 86400000 })); } catch {}
+}
+function loadTracking() {
+  try {
+    const raw = localStorage.getItem(LS_KEY);
+    if (!raw) return null;
+    const d = JSON.parse(raw);
+    if (Date.now() > d.expiry) { localStorage.removeItem(LS_KEY); return null; }
+    return d;
+  } catch { return null; }
+}
+function clearTracking() { try { localStorage.removeItem(LS_KEY); } catch {} }
+
+// ── PIX pendente (antes do pagamento) ────────────────────────────────────────
+function savePending(data) {
+  try { localStorage.setItem(LS_PENDING_KEY, JSON.stringify({ ...data, savedAt: Date.now() })); } catch {}
+}
+function loadPending() {
+  try {
+    const raw = localStorage.getItem(LS_PENDING_KEY);
+    if (!raw) return null;
+    const d = JSON.parse(raw);
+    const elapsed = (Date.now() - d.savedAt) / 1000;
+    if (elapsed >= TOTAL_SECS) { localStorage.removeItem(LS_PENDING_KEY); return null; }
+    return { ...d, remainingSecs: Math.floor(TOTAL_SECS - elapsed) };
+  } catch { return null; }
+}
+function clearPending() { try { localStorage.removeItem(LS_PENDING_KEY); } catch {} }
+
+export default function PixScreen({ active, amount, cart, customer, deliveryAddress, storeId, onBack, onPaid, showToast }) {
+  const [pixKey, setPixKey]               = useState('Gerando PIX...');
+  const [qrCode, setQrCode]               = useState(null);
+  const [ready, setReady]                 = useState(false);
+  const [copyState, setCopyState]         = useState('idle');
+  const [countdown, setCountdown]         = useState(TOTAL_SECS);
+  const [expired, setExpired]             = useState(false);
+  const [paid, setPaid]                   = useState(false);
+  const [orderStatus, setOrderStatus]     = useState('pending');
+  const [linkCopied, setLinkCopied]       = useState(false);
+  const [showBackConfirm, setShowBackConfirm] = useState(false);
+  const [summaryOpen, setSummaryOpen]     = useState(false);
+
+  const countdownRef   = useRef(null);
+  const pollRef        = useRef(null);
+  const statusPollRef  = useRef(null);
+  const pixIdRef       = useRef(null);
+  const amountRef      = useRef(amount);
+  const customerRef    = useRef(customer);
+  const addressRef     = useRef(deliveryAddress);
+
+  // Mantém refs atualizadas
+  useEffect(() => { customerRef.current  = customer;        }, [customer]);
+  useEffect(() => { addressRef.current   = deliveryAddress; }, [deliveryAddress]);
 
   const stopAll = () => {
     clearInterval(countdownRef.current);
     clearInterval(pollRef.current);
+    clearInterval(statusPollRef.current);
   };
 
-  const startCountdown = () => {
+  // ── Polling de status do pedido para o cliente ────────────────────────────
+  const startStatusPolling = (pixId) => {
+    clearInterval(statusPollRef.current);
+    statusPollRef.current = setInterval(async () => {
+      try {
+        const res = await fetch(`/api/order-status?pixId=${pixId}`);
+        if (!res.ok) return;
+        const data = await res.json();
+        if (data.status) setOrderStatus(data.status);
+      } catch {}
+    }, 8000); // Atualiza a cada 8s
+  };
+
+  const startCountdown = (initialSecs = TOTAL_SECS) => {
     clearInterval(countdownRef.current);
-    let secs = TOTAL_SECS;
-    setCountdown(TOTAL_SECS);
+    let secs = initialSecs;
+    setCountdown(secs);
     setExpired(false);
     countdownRef.current = setInterval(() => {
       secs--;
@@ -79,6 +147,7 @@ export default function PixScreen({ active, amount, cart, customer, deliveryAddr
       if (secs <= 0) {
         clearInterval(countdownRef.current);
         clearInterval(pollRef.current);
+        clearPending();
         setExpired(true);
       }
     }, 1000);
@@ -94,21 +163,32 @@ export default function PixScreen({ active, amount, cart, customer, deliveryAddr
         const data = await res.json();
         if (data.status === 'paid') {
           stopAll();
+          clearPending();
           const approvedDate = new Date().toISOString().slice(0, 19).replace('T', ' ');
-          const customerData = customer
-            ? { name: customer.name || '', email: '', phone: customer.phone || '', document: '' }
+          const cust = customerRef.current;
+          const customerData = cust
+            ? { name: cust.name || '', email: '', phone: cust.phone || '', document: '' }
             : null;
           sendUtmifyOrder(id, 'paid', amountRef.current, approvedDate, customerData);
           firePixelPurchase(amountRef.current, id);
           sendCapiPurchase(amountRef.current, id);
-          // ── Save order to admin dashboard ──────────────────────────────────
           saveOrderToDashboard({
             pixId: id,
             cart,
             amount: amountRef.current,
-            customer,
-            address: deliveryAddress,
+            customer: cust,
+            address: addressRef.current,
+            storeId,
           });
+          // Salva estado para persistir no refresh
+          saveTracking({
+            pixId: id,
+            amount: amountRef.current,
+            customer: cust,
+            deliveryAddress: addressRef.current,
+          });
+          setOrderStatus('pending');
+          startStatusPolling(id);
           setPaid(true);
         }
         if (data.status === 'expired' || data.status === 'cancelled') {
@@ -128,6 +208,7 @@ export default function PixScreen({ active, amount, cart, customer, deliveryAddr
         body: JSON.stringify({
           amount:       amountRef.current,
           description:  'Pedido Pizzaria',
+          storeId:      storeId || undefined,
           payer: customer ? {
             name:  customer.name  || undefined,
             phone: customer.phone || undefined,
@@ -139,9 +220,33 @@ export default function PixScreen({ active, amount, cart, customer, deliveryAddr
       const data = await res.json();
       pixIdRef.current = data.id;
       setPixKey(data.pix_copy_paste);
+      // Gera QR Code localmente a partir do código copia-e-cola
+      if (data.pix_copy_paste) {
+        QRCode.toDataURL(data.pix_copy_paste, {
+          width: 220,
+          margin: 1,
+          color: { dark: '#000000', light: '#ffffff' },
+        }).then(url => setQrCode(url)).catch(() => {});
+      }
       setReady(true);
-      const customerData = customer
-        ? { name: customer.name || '', email: '', phone: customer.phone || '', document: '' }
+      // Salva PIX pendente para restaurar após refresh
+      savePending({
+        pixId:   data.id,
+        pixKey:  data.pix_copy_paste,
+        amount:  amountRef.current,
+        customer: customerRef.current,
+        address:  addressRef.current,
+      });
+      // Salva transação para aparecer no painel de Transações
+      const cust = customerRef.current;
+      const items = Object.values(cart || {}).map(({ item, qty }) => ({ id: item.id, name: item.name, qty, price: item.price }));
+      fetch('/api/order-save?type=transaction', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ pixId: data.id, amount: amountRef.current, customer: cust, items, address: addressRef.current, storeId: storeId || undefined }),
+      }).catch(() => {});
+      const customerData = cust
+        ? { name: cust.name || '', email: '', phone: cust.phone || '', document: '' }
         : null;
       sendUtmifyOrder(data.id, 'waiting_payment', amountRef.current, null, customerData);
       startPolling(data.id);
@@ -151,8 +256,10 @@ export default function PixScreen({ active, amount, cart, customer, deliveryAddr
   };
 
   const handleNewKey = () => {
+    clearPending();
     setExpired(false);
     setPixKey('Gerando PIX...');
+    setQrCode(null);
     setReady(false);
     setCopyState('idle');
     startCountdown();
@@ -161,11 +268,54 @@ export default function PixScreen({ active, amount, cart, customer, deliveryAddr
 
   useEffect(() => {
     if (active) {
+      // ── 1. Tenta restaurar tela de rastreamento (pós-pagamento) ───────────
+      const saved = loadTracking();
+      if (saved?.pixId) {
+        pixIdRef.current  = saved.pixId;
+        amountRef.current = saved.amount || amount;
+        setOrderStatus('pending');
+        startStatusPolling(saved.pixId);
+        // Busca status + detalhes imediatos (inclui address/customerName/total)
+        fetch(`/api/order-status?pixId=${saved.pixId}`)
+          .then(r => r.json())
+          .then(d => {
+            if (d.status) setOrderStatus(d.status);
+            // Atualiza amount caso venha do link compartilhado (sem amount local)
+            if (d.total && !amountRef.current) amountRef.current = d.total;
+          })
+          .catch(() => {});
+        setPaid(true);
+        return;
+      }
+
+      // ── 2. Tenta restaurar PIX pendente (antes do pagamento) ─────────────
+      const pending = loadPending();
+      if (pending?.pixId && pending.pixKey && pending.remainingSecs > 0) {
+        pixIdRef.current  = pending.pixId;
+        amountRef.current = pending.amount || amount;
+        setPixKey(pending.pixKey);
+        setReady(true);
+        setCopyState('idle');
+        setPaid(false);
+        setOrderStatus('pending');
+        // Regenera QR Code a partir do código salvo
+        QRCode.toDataURL(pending.pixKey, {
+          width: 220, margin: 1,
+          color: { dark: '#000000', light: '#ffffff' },
+        }).then(url => setQrCode(url)).catch(() => {});
+        startCountdown(pending.remainingSecs);
+        startPolling(pending.pixId);
+        return;
+      }
+
+      // ── 3. Fluxo normal: gerar novo PIX ──────────────────────────────────
       amountRef.current = amount;
       setPixKey('Gerando PIX...');
+      setQrCode(null);
       setReady(false);
       setCopyState('idle');
       setPaid(false);
+      setOrderStatus('pending');
       startCountdown();
       createPix();
     } else {
@@ -189,17 +339,38 @@ export default function PixScreen({ active, amount, cart, customer, deliveryAddr
   const dashOffset = CIRC * (1 - countdown / TOTAL_SECS);
 
   if (paid) {
-    const now = new Date();
-    const from = new Date(now.getTime() + 25 * 60000);
-    const to   = new Date(now.getTime() + 35 * 60000);
-    const pad  = n => String(n).padStart(2, '0');
-    const eta  = `${pad(from.getHours())}:${pad(from.getMinutes())} - ${pad(to.getHours())}:${pad(to.getMinutes())}`;
+    const saved  = loadTracking();
+    const addr   = deliveryAddress || saved?.deliveryAddress || '';
+    const now    = new Date();
+    const from   = new Date(now.getTime() + 25 * 60000);
+    const to     = new Date(now.getTime() + 35 * 60000);
+    const pad    = n => String(n).padStart(2, '0');
+    const eta    = `${pad(from.getHours())}:${pad(from.getMinutes())} - ${pad(to.getHours())}:${pad(to.getMinutes())}`;
+    const stInfo = STATUS_INFO[orderStatus] || STATUS_INFO.pending;
+    const dots   = stInfo.dots;
+
+    function handleClose() {
+      clearTracking();
+      stopAll();
+      onPaid();
+    }
+
+    function copyTrackingLink() {
+      const link = `${window.location.origin}/?t=${pixIdRef.current}`;
+      navigator.clipboard.writeText(link).then(() => {
+        setLinkCopied(true);
+        setTimeout(() => setLinkCopied(false), 2500);
+      }).catch(() => {
+        // fallback: mostra alert com o link
+        alert('Link do pedido:\n' + link);
+      });
+    }
 
     return (
       <div className={'screen tracking-screen' + (active ? ' active' : '')}>
         {/* top bar */}
         <div className="tracking-topbar">
-          <button className="tracking-back-btn" onClick={onPaid}>
+          <button className="tracking-back-btn" onClick={handleClose}>
             <svg viewBox="0 0 24 24" width="20" height="20"><path fill="currentColor" d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/></svg>
           </button>
           <button className="tracking-help-btn">
@@ -218,26 +389,47 @@ export default function PixScreen({ active, amount, cart, customer, deliveryAddr
             <p className="tracking-realtime">Atualizado em<br/>tempo real</p>
           </div>
 
-          {/* progress bar */}
+          {/* progress bar dinâmico */}
           <div className="tracking-progress">
             <div className="tracking-progress-line">
-              <div className="tracking-progress-fill"/>
+              <div className="tracking-progress-fill" style={{
+                width: dots === 1 ? '0%' : dots === 2 ? '50%' : '100%',
+                transition: 'width 0.8s ease',
+              }}/>
             </div>
             <div className="tracking-dots">
-              <span className="tracking-dot active"/>
-              <span className="tracking-dot"/>
-              <span className="tracking-dot"/>
+              <span className={`tracking-dot${dots >= 1 ? ' active' : ''}`}/>
+              <span className={`tracking-dot${dots >= 2 ? ' active' : ''}`}/>
+              <span className={`tracking-dot${dots >= 3 ? ' active' : ''}`}/>
             </div>
           </div>
 
-          {/* status */}
+          {/* status dinâmico */}
           <div className="tracking-status-card">
             <div className="tracking-status-text">
               <svg viewBox="0 0 24 24" width="16" height="16" style={{flexShrink:0,marginTop:2}}><circle cx="12" cy="12" r="10" fill="#e8001d"/><path d="M9 12l2 2 4-4" stroke="#fff" strokeWidth="2" fill="none" strokeLinecap="round" strokeLinejoin="round"/></svg>
-              <span>O pedido está sendo preparado e logo sairá pra entrega</span>
+              <span>{stInfo.text}</span>
             </div>
             <svg viewBox="0 0 24 24" width="18" height="18" style={{flexShrink:0,color:'#bbb'}}><path fill="currentColor" d="M7.41 8.59L12 13.17l4.59-4.58L18 10l-6 6-6-6 1.41-1.41z"/></svg>
           </div>
+
+          {/* link compartilhável do pedido */}
+          <button
+            className={'tracking-share-btn' + (linkCopied ? ' copied' : '')}
+            onClick={copyTrackingLink}
+          >
+            {linkCopied ? (
+              <>
+                <svg viewBox="0 0 24 24" width="16" height="16"><path fill="currentColor" d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>
+                Link copiado!
+              </>
+            ) : (
+              <>
+                <svg viewBox="0 0 24 24" width="16" height="16"><path fill="currentColor" d="M18 16.08c-.76 0-1.44.3-1.96.77L8.91 12.7c.05-.23.09-.46.09-.7s-.04-.47-.09-.7l7.05-4.11c.54.5 1.25.81 2.04.81 1.66 0 3-1.34 3-3s-1.34-3-3-3-3 1.34-3 3c0 .24.04.47.09.7L8.04 9.81C7.5 9.31 6.79 9 6 9c-1.66 0-3 1.34-3 3s1.34 3 3 3c.79 0 1.5-.31 2.04-.81l7.12 4.16c-.05.21-.08.43-.08.65 0 1.61 1.31 2.92 2.92 2.92s2.92-1.31 2.92-2.92-1.31-2.92-2.92-2.92z"/></svg>
+                Copiar link do pedido
+              </>
+            )}
+          </button>
 
           {/* ifood delivery notice */}
           <div className="tracking-ifood-banner">
@@ -249,8 +441,8 @@ export default function PixScreen({ active, amount, cart, customer, deliveryAddr
           <div className="tracking-section">
             <p className="tracking-section-title">Entrega em</p>
             <div className="tracking-address-box">
-              {deliveryAddress
-                ? <p className="tracking-address-text">{deliveryAddress}</p>
+              {addr
+                ? <p className="tracking-address-text">{addr}</p>
                 : <div className="tracking-address-blur"/>
               }
             </div>
@@ -283,7 +475,7 @@ export default function PixScreen({ active, amount, cart, customer, deliveryAddr
           </div>
 
           {/* fale com loja */}
-          <button className="tracking-contact-btn" onClick={onPaid}>
+          <button className="tracking-contact-btn" onClick={handleClose}>
             Fale com a loja
             <svg viewBox="0 0 24 24" width="17" height="17"><path fill="currentColor" d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm-2 12H6v-2h12v2zm0-3H6V9h12v2zm0-3H6V6h12v2z"/></svg>
           </button>
@@ -292,10 +484,47 @@ export default function PixScreen({ active, amount, cart, customer, deliveryAddr
     );
   }
 
+  // ── Resumo do pedido ─────────────────────────────────────────────────────
+  const cartItems = Object.values(cart || {});
+
+  function handleBackClick() {
+    // Se PIX já expirou ou não foi gerado ainda, volta direto
+    if (expired || !ready) { stopAll(); clearPending(); onBack(); return; }
+    setShowBackConfirm(true);
+  }
+
+  function handleCancelPix() {
+    stopAll();
+    clearPending();
+    setShowBackConfirm(false);
+    onBack();
+  }
+
   return (
     <div className={'screen' + (active ? ' active' : '')}>
+
+      {/* ── Popup confirmação de voltar ── */}
+      {showBackConfirm && (
+        <div className="pix-back-overlay">
+          <div className="pix-back-popup">
+            <div className="pix-back-popup-icon">⚠️</div>
+            <h3 className="pix-back-popup-title">Cancelar pagamento?</h3>
+            <p className="pix-back-popup-text">
+              Existe um PIX gerado de <strong>{fmtPrice(amount)}</strong>.<br/>
+              Ao voltar, o código será cancelado e você poderá adicionar mais itens ou escolher outro método.
+            </p>
+            <button className="pix-back-popup-cancel" onClick={handleCancelPix}>
+              Sim, cancelar e voltar ao carrinho
+            </button>
+            <button className="pix-back-popup-keep" onClick={() => setShowBackConfirm(false)}>
+              Continuar no PIX
+            </button>
+          </div>
+        </div>
+      )}
+
       <div className="pix-header">
-        <button className="screen-back-btn" onClick={() => { stopAll(); onBack(); }}>
+        <button className="screen-back-btn" onClick={handleBackClick}>
           <svg viewBox="0 0 24 24" width="22" height="22"><path fill="currentColor" d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/></svg>
           Voltar
         </button>
@@ -328,8 +557,22 @@ export default function PixScreen({ active, amount, cart, customer, deliveryAddr
           )}
         </div>
 
+        {/* QR Code */}
+        <div className="pix-qr-wrap">
+          {qrCode ? (
+            <>
+              <img src={qrCode} alt="QR Code PIX" className="pix-qr-img" />
+              <p className="pix-qr-hint">Aponte a câmera do celular para o QR Code</p>
+            </>
+          ) : (
+            <div className="pix-qr-placeholder">
+              <div className="pix-qr-spinner" />
+            </div>
+          )}
+        </div>
+
         <div className="pix-code-section">
-          <p className="pix-code-label">Pague com <strong>Pix copia e cola</strong>:</p>
+          <p className="pix-code-label">Ou pague com <strong>Pix copia e cola</strong>:</p>
           <div className="pix-code-row">
             <span className="pix-code-text">{pixKey}</span>
             <button className="pix-inline-copy" disabled={!ready} onClick={doCopy}>
@@ -353,6 +596,27 @@ export default function PixScreen({ active, amount, cart, customer, deliveryAddr
         >
           Já paguei
         </button>
+
+        {/* ── Resumo do pedido ── */}
+        {cartItems.length > 0 && (
+          <div className="pix-summary">
+            <div className="pix-summary-header">🧾 Resumo do pedido</div>
+            <div className="pix-summary-body">
+              {cartItems.map(({ item, qty }) => (
+                <div key={item.id} className="pix-summary-row">
+                  <span className="pix-summary-qty">{qty}x</span>
+                  <span className="pix-summary-name">{item.name}</span>
+                  <span className="pix-summary-price">{fmtPrice(item.price * qty)}</span>
+                </div>
+              ))}
+              <div className="pix-summary-total">
+                <span>Total</span>
+                <span>{fmtPrice(amount)}</span>
+              </div>
+            </div>
+          </div>
+        )}
+
       </div>
     </div>
   );
