@@ -1,7 +1,7 @@
-export default function Header({ onSearchOpen, showToast }) {
+export default function Header({ onSearchOpen, showToast, storeName, storeLogoUrl }) {
   const handleShare = () => {
     if (navigator.share) {
-      navigator.share({ title: 'Superp Delivery — Cardápio', url: window.location.href });
+      navigator.share({ title: (storeName || 'Cardápio'), url: window.location.href });
     } else {
       navigator.clipboard.writeText(window.location.href)
         .then(() => showToast('🔗 Link copiado!'));
@@ -13,9 +13,12 @@ export default function Header({ onSearchOpen, showToast }) {
       <div className="header-inner">
         <div className="header-left">
           <div className="store-logo">
-            <img src="https://staginganotaai.s3.us-west-2.amazonaws.com/produtos/1700063317725blob" alt="Logo" />
+            {storeLogoUrl
+              ? <img src={storeLogoUrl} alt={storeName || 'Logo'} />
+              : <span style={{ fontSize: 28 }}>🍕</span>
+            }
           </div>
-          <span className="store-name">Superp Delivery</span>
+          <span className="store-name">{storeName || 'Cardápio'}</span>
         </div>
         <div className="header-right">
           <button className="hdr-btn" title="Buscar" onClick={onSearchOpen}>

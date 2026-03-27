@@ -24,7 +24,32 @@ const PM_LABEL = {
   cash:          { icon: '💵', label: 'Dinheiro',          color: '#10b981' },
 };
 
-function OrderCard({ order, token, storeId, onMoved, onFinalized, col }) {
+function printOrder(order) {
+  const fmtPrice = (c) => 'R$ ' + (c / 100).toFixed(2).replace('.', ',');
+  const now = new Date().toLocaleString('pt-BR');
+  const pm = { pix_online:'PIX Online', card_online:'Cartão Online', card_delivery:'Cartão na Entrega', pix_delivery:'PIX na Entrega', cash:'Dinheiro' };
+  const lines = [
+    `<center><b>PEDIDO #${String(order.id).slice(-6)}</b></center>`,
+    `<center>${now}</center>`,
+    `<hr/>`,
+    `<b>Cliente:</b> ${order.customer?.name || '—'}<br/>`,
+    order.customer?.phone ? `<b>Tel:</b> ${order.customer.phone}<br/>` : '',
+    order.address ? `<b>End.:</b> ${order.address}<br/>` : '',
+    `<hr/>`,
+    ...(order.items || []).map(i => `${i.qty || 1}x ${i.name} &nbsp; ${fmtPrice((i.price || 0) * (i.qty || 1))}<br/>`),
+    `<hr/>`,
+    `<b>TOTAL: ${fmtPrice(order.total || 0)}</b><br/>`,
+    (order.payment_method || order.paymentMethod) ? `Pgto: ${pm[order.payment_method || order.paymentMethod] || '—'}<br/>` : '',
+  ].join('');
+  const w = window.open('', '_blank', 'width=400,height=600');
+  w.document.write(`<html><head><style>body{font-family:monospace;font-size:14px;width:300px;padding:8px}hr{border:1px dashed #000}</style></head><body>${lines}<br/><br/></body></html>`);
+  w.document.close();
+  w.focus();
+  w.print();
+  w.close();
+}
+
+function OrderCard({ order, token, storeId, onMoved, onFinalized, col, autoPrint }) {
   const [moving,    setMoving]    = useState(false);
   const [finishing, setFinishing] = useState(false);
 
@@ -39,6 +64,7 @@ function OrderCard({ order, token, storeId, onMoved, onFinalized, col }) {
         body: JSON.stringify({ id: order.id, kanbanStatus: nextStatus }),
       });
       onMoved(order.id, nextStatus);
+      if (nextStatus === 'preparing' && autoPrint) printOrder(order);
     } catch {}
     setMoving(false);
   }
@@ -107,6 +133,10 @@ function OrderCard({ order, token, storeId, onMoved, onFinalized, col }) {
               {moving ? '...' : NEXT_LABEL[col]}
             </button>
           )}
+          <button className="kanban-move-btn" onClick={() => printOrder(order)}
+            style={{ background: '#374151', fontSize: 12 }}>
+            🖨️ Imprimir pedido
+          </button>
           {col === 'delivered' && (
             <button className="kanban-move-btn" onClick={finalize} disabled={finishing}
               style={{ background: '#6b7280', fontSize: 12 }}>
@@ -122,6 +152,7 @@ function OrderCard({ order, token, storeId, onMoved, onFinalized, col }) {
 export default function OrdersPage({ token, storeId }) {
   const [orders, setOrders]   = useState([]);
   const [loading, setLoading] = useState(true);
+  const [autoPrint, setAutoPrint] = useState(() => localStorage.getItem('kanban_auto_print') === 'true');
 
   const fetchOrders = useCallback(() => {
     if (!storeId) return;
@@ -169,7 +200,20 @@ export default function OrdersPage({ token, storeId }) {
           </h3>
           <p style={{ fontSize: 12, color: '#aaa', marginTop: 4 }}>Atualiza a cada 30s automaticamente</p>
         </div>
-        <button className="adm-btn ghost" onClick={fetchOrders} style={{ fontSize: 13 }}>🔄 Atualizar</button>
+        <div style={{ display: 'flex', gap: 8 }}>
+          <button className="adm-btn ghost" onClick={fetchOrders} style={{ fontSize: 13 }}>🔄 Atualizar</button>
+          <button
+            className={`adm-btn${autoPrint ? ' primary' : ' ghost'}`}
+            style={{ fontSize: 13 }}
+            onClick={() => {
+              const next = !autoPrint;
+              setAutoPrint(next);
+              localStorage.setItem('kanban_auto_print', String(next));
+            }}
+          >
+            🖨️ Auto-imprimir: {autoPrint ? 'ON' : 'OFF'}
+          </button>
+        </div>
       </div>
 
       <div className="kanban-board">
@@ -188,7 +232,7 @@ export default function OrdersPage({ token, storeId }) {
                   <div className="kanban-empty">Nenhum pedido</div>
                 ) : (
                   colOrders.map(o => (
-                    <OrderCard key={o.id} order={o} token={token} storeId={storeId} onMoved={handleMoved} onFinalized={handleFinalized} col={col.key} />
+                    <OrderCard key={o.id} order={o} token={token} storeId={storeId} onMoved={handleMoved} onFinalized={handleFinalized} col={col.key} autoPrint={autoPrint} />
                   ))
                 )}
               </div>

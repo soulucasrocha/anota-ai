@@ -3,12 +3,12 @@ import { useState } from 'react';
 const NAV = [
   { key: 'dashboard',    icon: '📊', label: 'Dashboard'           },
   { key: 'products',     icon: '🍕', label: 'Produtos'             },
-  { key: 'reports',      icon: '📈', label: 'Relatórios'           },
   { key: 'orders',       icon: '🧾', label: 'Pedidos (Kanban)'     },
   { key: 'transactions', icon: '💳', label: 'Transações'           },
   { key: 'payments',     icon: '💲', label: 'Formas de Pagamento'  },
   { key: 'profile',      icon: '🏪', label: 'Perfil da Loja'       },
   { key: 'tracking',     icon: '📡', label: 'Rastreamento'         },
+  { key: 'printer',      icon: '🖨️', label: 'Impressora'           },
 ];
 
 export default function AdminLayout({ page, setPage, onLogout, children, stores, storeId, onStoreSwitch, onCreateStore, currentStore }) {
@@ -18,9 +18,9 @@ export default function AdminLayout({ page, setPage, onLogout, children, stores,
 
   const titles = {
     dashboard: 'Dashboard', products: 'Gestão de Produtos',
-    reports: 'Relatórios', orders: 'Pedidos (Kanban)',
-    transactions: 'Transações PIX', payments: 'Formas de Pagamento',
-    profile: 'Perfil da Loja', tracking: 'Rastreamento',
+    orders: 'Pedidos (Kanban)', transactions: 'Transações PIX',
+    payments: 'Formas de Pagamento', profile: 'Perfil da Loja',
+    tracking: 'Rastreamento', printer: 'Impressora',
   };
 
   function handleCreateStore(e) {

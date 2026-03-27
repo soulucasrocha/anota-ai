@@ -103,6 +103,8 @@ export default function App() {
   const [geoData, setGeoData]                   = useState(null);
   const [dynamicMenu, setDynamicMenu]           = useState(null);
   const [storeId, setStoreId]                   = useState(null);
+  const [storeName, setStoreName]               = useState('');
+  const [storeLogoUrl, setStoreLogoUrl]         = useState('');
   const [paymentMethod, setPaymentMethod]       = useState(() => _s?.paymentMethod || 'pix_online');
   const [deliveryOrderId, setDeliveryOrderId]   = useState(() => _s?.deliveryOrderId || null);
 
@@ -125,6 +127,8 @@ export default function App() {
       .then(d => {
         if (d.menu) setDynamicMenu(d.menu);
         if (d.storeId) setStoreId(d.storeId);
+        if (d.storeName) setStoreName(d.storeName);
+        if (d.storeLogoUrl) setStoreLogoUrl(d.storeLogoUrl);
       })
       .catch(() => {}); // silently fall back to static menu
   }, [slug]);
@@ -247,7 +251,7 @@ export default function App() {
 
   return (
     <>
-      <Header onSearchOpen={() => setSearchOpen(true)} showToast={showToast} />
+      <Header onSearchOpen={() => setSearchOpen(true)} showToast={showToast} storeName={storeName} storeLogoUrl={storeLogoUrl} />
       <StoreInfoBar />
       <CategoryNav />
       <DeliveryBanner geoData={geoData} />

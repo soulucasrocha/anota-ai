@@ -2,14 +2,14 @@ import { useState, useEffect } from 'react';
 import '../admin/admin.css';
 import LoginPage          from './pages/LoginPage';
 import AdminLayout        from './components/AdminLayout';
-import DashboardHome      from './pages/DashboardHome';
-import ProductsPage       from './pages/ProductsPage';
 import ReportsPage        from './pages/ReportsPage';
+import ProductsPage       from './pages/ProductsPage';
 import OrdersPage         from './pages/OrdersPage';
 import TransactionsPage   from './pages/TransactionsPage';
 import PaymentMethodsPage from './pages/PaymentMethodsPage';
 import StoreProfilePage   from './pages/StoreProfilePage';
 import TrackingPage       from './pages/TrackingPage';
+import PrinterPage        from './pages/PrinterPage';
 
 export default function AdminApp() {
   const [token,   setToken]   = useState(() => localStorage.getItem('adm_token') || null);
@@ -49,18 +49,21 @@ export default function AdminApp() {
   if (!token) return <LoginPage onLogin={setToken} />;
 
   const currentStore = stores.find(s => s.id === storeId);
+
+  function reloadStores() {
+    fetch('/api/admin-stores', { headers: { 'x-admin-token': token } })
+      .then(r => r.json()).then(d => setStores(d.stores || [])).catch(() => {});
+  }
+
   const pages = {
-    dashboard:    <DashboardHome    token={token} storeId={storeId} />,
+    dashboard:    <ReportsPage      token={token} storeId={storeId} />,
     products:     <ProductsPage     token={token} storeId={storeId} />,
-    reports:      <ReportsPage      token={token} storeId={storeId} />,
     orders:       <OrdersPage       token={token} storeId={storeId} />,
     transactions: <TransactionsPage token={token} storeId={storeId} />,
     payments:     <PaymentMethodsPage token={token} storeId={storeId} />,
-    profile:      <StoreProfilePage token={token} storeId={storeId} store={currentStore} onUpdated={() => {
-      fetch('/api/admin-stores', { headers: { 'x-admin-token': token } })
-        .then(r => r.json()).then(d => setStores(d.stores || [])).catch(() => {});
-    }} />,
+    profile:      <StoreProfilePage token={token} storeId={storeId} store={currentStore} onUpdated={reloadStores} />,
     tracking:     <TrackingPage     token={token} storeId={storeId} />,
+    printer:      <PrinterPage      token={token} storeId={storeId} store={currentStore} />,
   };
 
   return (
@@ -74,8 +77,14 @@ export default function AdminApp() {
           body: JSON.stringify({ name, slug }),
         }).then(r => r.json()).then(d => {
           if (d.store) {
-            setStores(prev => [...prev, d.store]);
-            switchStore(d.store.id);
+            // Re-fetch full list (with settings join) then switch to new store
+            fetch('/api/admin-stores', { headers: { 'x-admin-token': token } })
+              .then(r => r.json()).then(data => {
+                setStores(data.stores || []);
+                switchStore(d.store.id);
+              }).catch(() => {});
+          } else {
+            alert(d.error || 'Erro ao criar loja');
           }
         }).catch(() => {});
       }}

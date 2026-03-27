@@ -22,15 +22,20 @@ export default async function handler(req, res) {
     }
     if (!storeId) return res.status(200).json({ source: 'static', paymentMethods: { pix_online: true } });
 
-    // Get payment methods
-    const { data: settings } = await sb().from('store_settings').select('payment_methods').eq('store_id', storeId).maybeSingle();
+    // Get store info + payment methods in parallel
+    const [{ data: storeInfo }, { data: settings }] = await Promise.all([
+      sb().from('stores').select('name, logo_url').eq('id', storeId).maybeSingle(),
+      sb().from('store_settings').select('payment_methods').eq('store_id', storeId).maybeSingle(),
+    ]);
     const paymentMethods = settings?.payment_methods || { pix_online: true, card_online: false, card_delivery: false, pix_delivery: false, cash: false };
 
     // Get products
     const { data: products } = await sb().from('products').select('id,category,name,description,price,old_price,tag,img,active,sold_out,steps').eq('store_id', storeId).eq('active', true);
 
+    const storeMeta = { storeName: storeInfo?.name || '', storeLogoUrl: storeInfo?.logo_url || '' };
+
     if (!products || !products.length) {
-      return res.status(200).json({ source: 'static', paymentMethods, storeId });
+      return res.status(200).json({ source: 'static', paymentMethods, storeId, ...storeMeta });
     }
 
     const menu = {};
@@ -41,7 +46,7 @@ export default async function handler(req, res) {
       }
     });
 
-    return res.status(200).json({ source: 'blob', menu, paymentMethods, storeId });
+    return res.status(200).json({ source: 'blob', menu, paymentMethods, storeId, ...storeMeta });
   } catch (e) {
     return res.status(200).json({ source: 'static', paymentMethods: { pix_online: true } });
   }
