@@ -59,7 +59,7 @@ function buildWhatsappUrl(whatsapp, { orderId, cart, customer, deliveryAddress, 
   return `https://wa.me/${num}?text=${encodeURIComponent(msg)}`;
 }
 
-export default function DeliveryWaitingScreen({ active, orderId, amount, cart, customer, deliveryAddress, paymentMethod, changeNote, storeWhatsapp, storeName, onBack, onDone }) {
+export default function DeliveryWaitingScreen({ active, orderId, amount, cart, customer, deliveryAddress, paymentMethod, changeNote, changeFor, storeWhatsapp, storeName, onBack, onDone }) {
   const [orderStatus, setOrderStatus] = useState('pending');
   const [linkCopied, setLinkCopied]   = useState(false);
   const pollRef     = useRef(null);
@@ -192,11 +192,26 @@ export default function DeliveryWaitingScreen({ active, orderId, amount, cart, c
             <p className="tracking-address-text" style={{ color: '#e8001d', fontWeight: 700 }}>
               {PM_LABEL[paymentMethod] || 'Pagamento na entrega'}
             </p>
-            {changeNote && (
+            {paymentMethod === 'cash' && changeFor && changeFor > 0 ? (
+              <div style={{ marginTop: 8, display: 'flex', flexDirection: 'column', gap: 4 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, color: '#374151' }}>
+                  <span>Total do pedido:</span>
+                  <span style={{ fontWeight: 700 }}>{fmtPrice(amountRef.current || 0)}</span>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, color: '#374151' }}>
+                  <span>Pagamento em dinheiro:</span>
+                  <span style={{ fontWeight: 700 }}>R$ {Number(changeFor).toFixed(2).replace('.', ',')}</span>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 14, color: '#15803d', fontWeight: 700, borderTop: '1px dashed #d1fae5', paddingTop: 4 }}>
+                  <span>Troco:</span>
+                  <span>{changeFor * 100 > (amountRef.current || 0) ? fmtPrice(changeFor * 100 - (amountRef.current || 0)) : 'Sem troco'}</span>
+                </div>
+              </div>
+            ) : changeNote ? (
               <p style={{ color: '#15803d', fontWeight: 600, fontSize: 13, marginTop: 4 }}>
                 💵 {changeNote}
               </p>
-            )}
+            ) : null}
           </div>
         </div>
 

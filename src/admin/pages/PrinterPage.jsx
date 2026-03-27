@@ -101,6 +101,42 @@ export default function PrinterPage({ store }) {
 
   return (
     <>
+      {/* Como liberar QZ Tray de vez */}
+      <div className="adm-card" style={{ borderLeft: '4px solid #f59e0b' }}>
+        <div className="adm-card-header">
+          <h3>🔐 Liberar QZ Tray de vez — faça isso UMA VEZ SÓ</h3>
+        </div>
+        <div className="adm-card-body" style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+          <div style={{ background: '#fffbeb', border: '1px solid #fde68a', borderRadius: 10, padding: 14 }}>
+            <p style={{ fontWeight: 700, fontSize: 14, color: '#92400e', margin: '0 0 8px' }}>
+              Quando aparecer o popup do QZ Tray:
+            </p>
+            <ol style={{ fontSize: 13, color: '#78350f', lineHeight: 2, paddingLeft: 18, margin: 0 }}>
+              <li>Marque a caixa <strong>"Remember this decision"</strong> ✅</li>
+              <li>Depois clique em <strong>"Allow"</strong></li>
+            </ol>
+            <p style={{ fontSize: 12, color: '#92400e', margin: '8px 0 0', fontStyle: 'italic' }}>
+              Pronto! Nunca mais vai pedir permissão.
+            </p>
+          </div>
+          <div style={{ background: '#f0f9ff', border: '1px solid #bae6fd', borderRadius: 10, padding: 14 }}>
+            <p style={{ fontWeight: 700, fontSize: 13, color: '#0369a1', margin: '0 0 8px' }}>
+              OU adicione o site manualmente no Site Manager:
+            </p>
+            <ol style={{ fontSize: 13, color: '#075985', lineHeight: 2, paddingLeft: 18, margin: '0 0 10px' }}>
+              <li>Clique com o botão direito no ícone do QZ Tray (barra de tarefas, perto do relógio)</li>
+              <li>Clique em <strong>"Site Manager"</strong></li>
+              <li>Na aba <strong>"Allowed"</strong>, clique no botão <strong>"+"</strong></li>
+              <li>Digite o endereço abaixo e pressione Enter</li>
+              <li>Clique em <strong>"Close"</strong></li>
+            </ol>
+            <div style={{ background: '#fff', border: '1px solid #bae6fd', borderRadius: 8, padding: '8px 12px', fontFamily: 'monospace', fontSize: 13, color: '#0c4a6e', fontWeight: 700 }}>
+              https://oi-anota-ai.vercel.app
+            </div>
+          </div>
+        </div>
+      </div>
+
       {/* QZ Tray Status */}
       <div className="adm-card">
         <div className="adm-card-header">
