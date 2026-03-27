@@ -59,12 +59,17 @@ function buildWhatsappUrl(whatsapp, { orderId, cart, customer, deliveryAddress, 
   return `https://wa.me/${num}?text=${encodeURIComponent(msg)}`;
 }
 
-export default function DeliveryWaitingScreen({ active, orderId, amount, cart, customer, deliveryAddress, paymentMethod, changeNote, changeFor, storeWhatsapp, storeName, onBack, onDone }) {
+export default function DeliveryWaitingScreen({ active, orderId, amount, cart, customer, deliveryAddress, paymentMethod, changeNote: changeNoteProp, changeFor: changeForProp, storeWhatsapp, storeName, onBack, onDone }) {
   const [orderStatus, setOrderStatus] = useState('pending');
   const [linkCopied, setLinkCopied]   = useState(false);
   const pollRef     = useRef(null);
   const orderIdRef  = useRef(orderId);
   const amountRef   = useRef(amount);
+
+  // Restaura changeFor/changeNote do localStorage se props estiverem vazios (pós-refresh)
+  const saved = loadDeliveryOrder();
+  const changeFor  = changeForProp  ?? saved?.changeFor  ?? null;
+  const changeNote = changeNoteProp ?? saved?.changeNote ?? null;
 
   useEffect(() => { orderIdRef.current = orderId; }, [orderId]);
   useEffect(() => { amountRef.current  = amount;  }, [amount]);

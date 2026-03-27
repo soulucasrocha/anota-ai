@@ -120,7 +120,7 @@ export default function App() {
   useEffect(() => {
     if (screen === 'pix') return; // PIX tem própria persistência
     saveSession({ screen, cart, checkoutName, checkoutPhone, address, paymentMethod, deliveryOrderId, deliveryChangeNote, deliveryChangeFor });
-  }, [screen, cart, checkoutName, checkoutPhone, address, paymentMethod, deliveryOrderId, deliveryChangeNote]);
+  }, [screen, cart, checkoutName, checkoutPhone, address, paymentMethod, deliveryOrderId, deliveryChangeNote, deliveryChangeFor]);
 
   // ── Dynamic menu (from admin blob) ────────────────────────────────────────
   useEffect(() => {
@@ -250,6 +250,8 @@ export default function App() {
         orderId,
         amount: total,
         paymentMethod: method,
+        changeFor: changeFor || null,
+        changeNote: changeNote || null,
         expiry: Date.now() + 86400000,
       }));
     } catch {}
