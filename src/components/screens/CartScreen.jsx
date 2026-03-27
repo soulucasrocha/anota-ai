@@ -4,8 +4,8 @@ export default function CartScreen({ active, cart, getCartTotal, getCartCount, o
   const count = getCartCount();
   const total = getCartTotal();
 
-  const minOrderCents = (minOrder || 0) * 100;
-  const belowMin = minOrder > 0 && total < minOrderCents;
+  const minOrderCents = minOrder || 0; // já vem em centavos da API
+  const belowMin = minOrderCents > 0 && total < minOrderCents;
 
   return (
     <div className={'screen' + (active ? ' active' : '')}>

@@ -42,7 +42,10 @@ export default async function handler(req, res) {
     }
     if (req.method === 'PATCH' || req.method === 'POST') {
       const { delivery } = req.body || {};
-      await sb().from('store_settings').upsert({ store_id: storeId, delivery }, { onConflict: 'store_id' });
+      // Merge with existing data to avoid overwriting unrelated fields
+      const { data: existing } = await sb().from('store_settings').select('delivery').eq('store_id', storeId).maybeSingle();
+      const merged = { ...(existing?.delivery || {}), ...delivery };
+      await sb().from('store_settings').upsert({ store_id: storeId, delivery: merged }, { onConflict: 'store_id' });
       return res.status(200).json({ ok: true });
     }
   }

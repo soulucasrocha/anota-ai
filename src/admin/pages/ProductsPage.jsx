@@ -11,7 +11,12 @@ export default function ProductsPage({ token, storeId }) {
   const [search, setSearch]     = useState('');
   const [toast, setToast]       = useState('');
   const [saving, setSaving]     = useState(false);
-  const [toggling, setToggling] = useState(null); // id being toggled
+  const [toggling, setToggling] = useState(null);
+
+  // Pedido mínimo
+  const [minOrder,     setMinOrder]     = useState('');
+  const [savingMin,    setSavingMin]    = useState(false);
+  const [savedMin,     setSavedMin]     = useState(false);
 
   // Form state
   const [form, setForm] = useState({
@@ -31,6 +36,30 @@ export default function ProductsPage({ token, storeId }) {
   }
 
   useEffect(() => { fetchProducts(); }, [token, storeId]);
+
+  // Carrega pedido mínimo
+  useEffect(() => {
+    if (!storeId) return;
+    fetch(`/api/admin-products?type=delivery&storeId=${storeId}`, { headers: { 'x-admin-token': token } })
+      .then(r => r.json())
+      .then(d => {
+        const raw = d.delivery?.min_order;
+        setMinOrder(raw != null && raw > 0 ? String(raw / 100) : '');
+      })
+      .catch(() => {});
+  }, [token, storeId]);
+
+  async function saveMinOrder() {
+    setSavingMin(true);
+    await fetch('/api/admin-products?type=delivery', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json', 'x-admin-token': token, 'x-store-id': storeId },
+      body: JSON.stringify({ delivery: { min_order: minOrder !== '' ? Math.round(Number(minOrder) * 100) : 0 } }),
+    });
+    setSavingMin(false);
+    setSavedMin(true);
+    setTimeout(() => setSavedMin(false), 2000);
+  }
 
   function startEdit(p) {
     setForm({
@@ -124,6 +153,29 @@ export default function ProductsPage({ token, storeId }) {
   return (
     <>
       {toast && <div className="adm-toast">{toast}</div>}
+
+      {/* Pedido mínimo */}
+      <div className="adm-card" style={{ marginBottom: 16 }}>
+        <div className="adm-card-header"><h3>💰 Pedido Mínimo</h3></div>
+        <div className="adm-card-body" style={{ display: 'flex', alignItems: 'flex-end', gap: 12 }}>
+          <div style={{ flex: 1 }}>
+            <label className="adm-label">Valor mínimo do pedido (R$)</label>
+            <input
+              className="adm-input"
+              type="number" min="0" step="0.01"
+              placeholder="Ex: 20.00  (deixe vazio para sem mínimo)"
+              value={minOrder}
+              onChange={e => setMinOrder(e.target.value)}
+            />
+            <p style={{ fontSize: 12, color: '#aaa', marginTop: 4 }}>
+              O cliente só consegue avançar com o carrinho acima deste valor.
+            </p>
+          </div>
+          <button className="adm-btn primary" onClick={saveMinOrder} disabled={savingMin} style={{ whiteSpace: 'nowrap', marginBottom: 22 }}>
+            {savingMin ? 'Salvando...' : savedMin ? '✅ Salvo!' : '💾 Salvar'}
+          </button>
+        </div>
+      </div>
 
       {/* Tabs */}
       <div className="adm-tabs">

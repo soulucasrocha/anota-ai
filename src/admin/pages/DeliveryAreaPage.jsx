@@ -8,7 +8,6 @@ function fmtFee(cents) {
 export default function DeliveryAreaPage({ token, storeId }) {
   const [address,      setAddress]      = useState('');
   const [deliveryTime, setDeliveryTime] = useState('');
-  const [minOrder,     setMinOrder]     = useState('');
   const [cities,       setCities]       = useState([]); // [{name, fee, expanded, neighborhoods:[{name,fee}]}]
   const [saving,       setSaving]       = useState(false);
   const [saved,        setSaved]        = useState(false);
@@ -33,7 +32,6 @@ export default function DeliveryAreaPage({ token, storeId }) {
       .then(d => {
         setAddress(d.delivery?.address || '');
         setDeliveryTime(d.delivery?.delivery_time != null ? String(d.delivery.delivery_time) : '');
-        setMinOrder(d.delivery?.min_order != null ? String(d.delivery.min_order / 100) : '');
         // Load cities (new format) or migrate from old areas format
         if (d.delivery?.cities) {
           setCities(d.delivery.cities);
@@ -61,7 +59,6 @@ export default function DeliveryAreaPage({ token, storeId }) {
         delivery: {
           address,
           delivery_time: deliveryTime !== '' ? Number(deliveryTime) : null,
-          min_order: minOrder !== '' ? Math.round(Number(minOrder) * 100) : 0,
           cities,
         },
       }),
@@ -164,12 +161,6 @@ export default function DeliveryAreaPage({ token, storeId }) {
             <input className="adm-input" type="number" min="1" placeholder="Ex: 45"
               value={deliveryTime} onChange={e => setDeliveryTime(e.target.value)} />
             <p style={{ fontSize: 12, color: '#aaa', marginTop: 4 }}>Timer do Kanban.</p>
-          </div>
-          <div>
-            <label className="adm-label">💰 Pedido mínimo (R$)</label>
-            <input className="adm-input" type="number" min="0" step="0.01" placeholder="Ex: 30.00"
-              value={minOrder} onChange={e => setMinOrder(e.target.value)} />
-            <p style={{ fontSize: 12, color: '#aaa', marginTop: 4 }}>0 = sem mínimo.</p>
           </div>
         </div>
       </div>
