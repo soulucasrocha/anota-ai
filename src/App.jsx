@@ -110,6 +110,8 @@ export default function App() {
   const [deliveryOrderId, setDeliveryOrderId]   = useState(() => _s?.deliveryOrderId || null);
   const [deliveryChangeNote, setDeliveryChangeNote] = useState(() => _s?.deliveryChangeNote || null);
   const [deliveryChangeFor, setDeliveryChangeFor] = useState(() => _s?.deliveryChangeFor || null);
+  const [storeHours, setStoreHours]             = useState([]);
+  const [minOrder, setMinOrder]                 = useState(0);
 
   // Wrapper de setScreen que salva na sessão
   const setScreen = useCallback((s) => {
@@ -133,6 +135,8 @@ export default function App() {
         if (d.storeName) setStoreName(d.storeName);
         if (d.storeLogoUrl) setStoreLogoUrl(d.storeLogoUrl);
         if (d.storeWhatsapp) setStoreWhatsapp(d.storeWhatsapp);
+        if (d.storeHours) setStoreHours(d.storeHours);
+        if (d.minOrder != null) setMinOrder(d.minOrder);
       })
       .catch(() => {}); // silently fall back to static menu
   }, [slug]);
@@ -204,6 +208,49 @@ export default function App() {
     toastTimerRef.current = setTimeout(() => setToast(null), 1800);
   }, []);
 
+  // ── Store hours / closed check ────────────────────────────────────────────
+
+  function isStoreClosed() {
+    if (!storeHours || storeHours.length === 0) return false;
+    const now = new Date();
+    // Brazil UTC-3
+    const brNow = new Date(now.getTime() - 3 * 60 * 60 * 1000);
+    const dayIdx = brNow.getUTCDay(); // 0=Sun..6=Sat
+    const dayKeys = ['dom','seg','ter','qua','qui','sex','sab'];
+    const todayKey = dayKeys[dayIdx];
+    const todayHours = storeHours.find(h => h.day === todayKey);
+    if (!todayHours || !todayHours.enabled) return true;
+    const [openH, openM] = (todayHours.open || '00:00').split(':').map(Number);
+    const [closeH, closeM] = (todayHours.close || '23:59').split(':').map(Number);
+    const nowMinutes = brNow.getUTCHours() * 60 + brNow.getUTCMinutes();
+    const openMinutes = openH * 60 + openM;
+    const closeMinutes = closeH * 60 + closeM;
+    return nowMinutes < openMinutes || nowMinutes >= closeMinutes;
+  }
+
+  function getNextOpenTime() {
+    if (!storeHours || storeHours.length === 0) return null;
+    const now = new Date();
+    const brNow = new Date(now.getTime() - 3 * 60 * 60 * 1000);
+    const dayKeys = ['dom','seg','ter','qua','qui','sex','sab'];
+    const nowMinutes = brNow.getUTCHours() * 60 + brNow.getUTCMinutes();
+    // Check today and next 6 days
+    for (let i = 0; i < 7; i++) {
+      const d = new Date(brNow.getTime() + i * 86400000);
+      const key = dayKeys[d.getUTCDay()];
+      const h = storeHours.find(x => x.day === key);
+      if (!h || !h.enabled) continue;
+      const [openH, openM] = (h.open || '00:00').split(':').map(Number);
+      const openMinutes = openH * 60 + openM;
+      if (i === 0 && openMinutes <= nowMinutes) continue; // already past today's open
+      return h.open;
+    }
+    return null;
+  }
+
+  const storeClosed = isStoreClosed();
+  const nextOpen = storeClosed ? getNextOpenTime() : null;
+
   // ── Item click ────────────────────────────────────────────────────────────
 
   const handleItemClick = useCallback((item) => {
@@ -267,6 +314,15 @@ export default function App() {
   return (
     <>
       <Header onSearchOpen={() => setSearchOpen(true)} showToast={showToast} storeName={storeName} storeLogoUrl={storeLogoUrl} />
+      {storeClosed && (
+        <div style={{
+          background: '#dc2626', color: '#fff',
+          textAlign: 'center', padding: '10px 16px',
+          fontSize: 14, fontWeight: 600, letterSpacing: 0.2,
+        }}>
+          🔴 Fechado{nextOpen ? ` · Abre às ${nextOpen}` : ''}
+        </div>
+      )}
       <StoreInfoBar />
       <CategoryNav />
       <DeliveryBanner geoData={geoData} />
@@ -293,9 +349,13 @@ export default function App() {
         getCartCount={getCartCount}
         onBack={() => setScreen(null)}
         onClear={() => { clearCart(); setScreen(null); showToast('Carrinho limpo 🗑️'); }}
-        onAdvance={() => setScreen('checkout')}
+        onAdvance={() => {
+          if (storeClosed) { showToast('🔴 Loja fechada no momento'); return; }
+          setScreen('checkout');
+        }}
         onInc={incCartItem}
         onDec={removeFromCart}
+        minOrder={minOrder}
       />
 
       <CheckoutScreen

@@ -11,6 +11,7 @@ export default function ProductsPage({ token, storeId }) {
   const [search, setSearch]     = useState('');
   const [toast, setToast]       = useState('');
   const [saving, setSaving]     = useState(false);
+  const [toggling, setToggling] = useState(null); // id being toggled
 
   // Form state
   const [form, setForm] = useState({
@@ -54,7 +55,7 @@ export default function ProductsPage({ token, storeId }) {
     const payload = {
       ...rest,
       id: editId || undefined,
-      price: form.price,       // API handles conversion (cents)
+      price: form.price,
       oldPrice: form.oldPrice || undefined,
     };
     try {
@@ -69,6 +70,7 @@ export default function ProductsPage({ token, storeId }) {
         showToast(editId ? '✅ Produto atualizado!' : '✅ Produto adicionado!');
         resetForm();
         setTab('list');
+        fetchProducts();
       } else {
         showToast('❌ Erro ao salvar: ' + (data.error || 'desconhecido'));
       }
@@ -86,6 +88,32 @@ export default function ProductsPage({ token, storeId }) {
       setProducts(p => p.filter(x => x.id !== id));
       showToast('🗑️ Produto removido');
     } catch { showToast('❌ Erro ao remover'); }
+  }
+
+  async function handleToggleActive(p) {
+    setToggling(p.id);
+    const newActive = p.active === false ? true : false;
+    try {
+      await fetch(`/api/admin-products?storeId=${storeId}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'x-admin-token': token },
+        body: JSON.stringify({
+          storeId,
+          id: p.id,
+          category: p.category,
+          name: p.name,
+          desc: p.desc || p.description || '',
+          price: (p.price / 100).toFixed(2),
+          oldPrice: p.oldPrice ? (p.oldPrice / 100).toFixed(2) : undefined,
+          tag: p.tag || '',
+          img: p.img || '',
+          active: newActive,
+        }),
+      });
+      setProducts(prev => prev.map(x => x.id === p.id ? { ...x, active: newActive } : x));
+      showToast(newActive ? '✅ Produto ativado' : '🚫 Produto desativado');
+    } catch { showToast('❌ Erro ao atualizar'); }
+    setToggling(null);
   }
 
   const filtered = products.filter(p =>
@@ -123,28 +151,47 @@ export default function ProductsPage({ token, storeId }) {
             ) : filtered.length === 0 ? (
               <div className="adm-empty"><div className="empty-icon">🍕</div><p>Nenhum produto encontrado</p></div>
             ) : (
-              filtered.map(p => (
-                <div key={p.id} className="adm-product-item">
-                  {p.img
-                    ? <img src={p.img} alt={p.name} className="adm-product-img" onError={e => e.target.style.display='none'} />
-                    : <div className="adm-product-img" style={{background:'#f0f2f5',display:'flex',alignItems:'center',justifyContent:'center',fontSize:20}}>🍕</div>
-                  }
-                  <div className="adm-product-info">
-                    <h4>{p.name}</h4>
-                    <p>{p.desc}</p>
-                    <span className="adm-badge blue" style={{marginTop:4}}>{p.category}</span>
-                    {p.tag && <span className="adm-badge orange" style={{marginTop:4,marginLeft:4}}>{p.tag}</span>}
+              filtered.map(p => {
+                const isActive = p.active !== false;
+                return (
+                  <div key={p.id} className="adm-product-item" style={{ opacity: isActive ? 1 : 0.55 }}>
+                    {p.img
+                      ? <img src={p.img} alt={p.name} className="adm-product-img" onError={e => e.target.style.display='none'} />
+                      : <div className="adm-product-img" style={{background:'#f0f2f5',display:'flex',alignItems:'center',justifyContent:'center',fontSize:20}}>🍕</div>
+                    }
+                    <div className="adm-product-info">
+                      <h4>{p.name}</h4>
+                      <p>{p.desc}</p>
+                      <span className="adm-badge blue" style={{marginTop:4}}>{p.category}</span>
+                      {p.tag && <span className="adm-badge orange" style={{marginTop:4,marginLeft:4}}>{p.tag}</span>}
+                    </div>
+                    <span className="adm-product-price">{fmtMoney(p.price)}</span>
+                    <div className="adm-product-actions">
+                      {/* Active toggle */}
+                      <button
+                        onClick={() => handleToggleActive(p)}
+                        disabled={toggling === p.id}
+                        title={isActive ? 'Clique para desativar' : 'Clique para ativar'}
+                        style={{
+                          width: 44, height: 24, borderRadius: 12, border: 'none', cursor: 'pointer',
+                          background: isActive ? '#10b981' : '#d1d5db',
+                          position: 'relative', transition: 'background .2s', flexShrink: 0,
+                          opacity: toggling === p.id ? 0.6 : 1,
+                        }}
+                      >
+                        <span style={{
+                          position: 'absolute', top: 2, left: isActive ? 22 : 2,
+                          width: 20, height: 20, borderRadius: '50%', background: '#fff',
+                          transition: 'left .2s', display: 'block',
+                          boxShadow: '0 1px 3px rgba(0,0,0,.2)',
+                        }}/>
+                      </button>
+                      <button className="adm-btn ghost" style={{padding:'6px 12px',fontSize:12}} onClick={() => startEdit(p)}>✏️ Editar</button>
+                      <button className="adm-btn danger" style={{padding:'6px 10px',fontSize:12}} onClick={() => handleDelete(p.id)}>🗑️</button>
+                    </div>
                   </div>
-                  <span className="adm-product-price">{fmtMoney(p.price)}</span>
-                  <div className="adm-product-actions">
-                    <span className={`adm-badge ${p.active !== false ? 'green' : 'red'}`}>
-                      {p.active !== false ? 'Ativo' : 'Inativo'}
-                    </span>
-                    <button className="adm-btn ghost" style={{padding:'6px 12px',fontSize:12}} onClick={() => startEdit(p)}>✏️ Editar</button>
-                    <button className="adm-btn danger" style={{padding:'6px 10px',fontSize:12}} onClick={() => handleDelete(p.id)}>🗑️</button>
-                  </div>
-                </div>
-              ))
+                );
+              })
             )}
           </div>
         </div>

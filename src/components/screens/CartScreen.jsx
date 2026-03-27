@@ -1,8 +1,11 @@
 import { fmtPrice } from '../../utils/helpers'
 
-export default function CartScreen({ active, cart, getCartTotal, getCartCount, onBack, onClear, onAdvance, onInc, onDec }) {
+export default function CartScreen({ active, cart, getCartTotal, getCartCount, onBack, onClear, onAdvance, onInc, onDec, minOrder }) {
   const count = getCartCount();
   const total = getCartTotal();
+
+  const minOrderCents = (minOrder || 0) * 100;
+  const belowMin = minOrder > 0 && total < minOrderCents;
 
   return (
     <div className={'screen' + (active ? ' active' : '')}>
@@ -43,6 +46,18 @@ export default function CartScreen({ active, cart, getCartTotal, getCartCount, o
               <span>Total</span>
               <span className="cart-screen-total">{fmtPrice(total)}</span>
             </div>
+            {belowMin && (
+              <div style={{
+                margin: '12px 0 0', padding: '10px 14px', borderRadius: 10,
+                background: '#fff7ed', border: '1px solid #fed7aa',
+                color: '#c2410c', fontSize: 13, fontWeight: 600, textAlign: 'center',
+              }}>
+                Pedido mínimo: {fmtPrice(minOrderCents)}
+                <span style={{ fontWeight: 400, color: '#ea580c', display: 'block', fontSize: 12, marginTop: 2 }}>
+                  Faltam {fmtPrice(minOrderCents - total)} para o mínimo
+                </span>
+              </div>
+            )}
           </>
         )}
       </div>
@@ -50,7 +65,7 @@ export default function CartScreen({ active, cart, getCartTotal, getCartCount, o
       <div className="screen-footer">
         <button
           className="screen-advance-btn"
-          disabled={count === 0}
+          disabled={count === 0 || belowMin}
           onClick={onAdvance}
         >
           {count > 0 ? `Avançar • ${fmtPrice(total)}` : 'Avançar'}

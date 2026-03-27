@@ -32,7 +32,7 @@ export default function FinalizeScreen({ active, address, onAddressChange, getCa
   const debouncedAddress = useDebounce(address, 500);
   const inputRef = useRef(null);
 
-  // Fetch payment methods
+  // Fetch payment methods + default
   useEffect(() => {
     if (!active) return;
     fetch(`/api/menu-public${slug ? `?slug=${slug}` : ''}`)
@@ -40,9 +40,14 @@ export default function FinalizeScreen({ active, address, onAddressChange, getCa
       .then(d => {
         if (d.paymentMethods) {
           setPayMethods(d.paymentMethods);
-          // Auto-select first enabled method
-          const first = Object.keys(PM_INFO).find(k => d.paymentMethods[k]);
-          if (first) setSelectedPay(first);
+          // Use defaultPayment if set and enabled, otherwise first enabled
+          const def = d.defaultPayment;
+          if (def && d.paymentMethods[def]) {
+            setSelectedPay(def);
+          } else {
+            const first = Object.keys(PM_INFO).find(k => d.paymentMethods[k]);
+            if (first) setSelectedPay(first);
+          }
         }
       })
       .catch(() => {});

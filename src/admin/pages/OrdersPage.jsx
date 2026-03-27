@@ -29,7 +29,53 @@ function printOrder(order) {
   thermalPrintOrder(order);
 }
 
-function OrderCard({ order, token, storeId, onMoved, onFinalized, col, autoPrint }) {
+// Feature 7: Countdown timer
+function OrderTimer({ createdAt, deliveryMinutes }) {
+  const [now, setNow] = useState(() => Date.now());
+
+  useEffect(() => {
+    const t = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(t);
+  }, []);
+
+  if (!deliveryMinutes || !createdAt) return null;
+
+  const createdMs = new Date(createdAt).getTime();
+  const deadlineMs = createdMs + deliveryMinutes * 60 * 1000;
+  const remainingMs = deadlineMs - now;
+  const elapsedMs = now - createdMs;
+
+  if (remainingMs > 20 * 60 * 1000) {
+    // Normal: more than 20min left
+    const mins = Math.floor(remainingMs / 60000);
+    const secs = Math.floor((remainingMs % 60000) / 1000);
+    return (
+      <div style={{ fontSize: 12, fontWeight: 600, color: '#16a34a', marginTop: 4 }}>
+        ⏱️ {String(mins).padStart(2,'0')}:{String(secs).padStart(2,'0')} restantes
+      </div>
+    );
+  } else if (remainingMs > 0) {
+    // Warning: ≤ 20min left
+    const mins = Math.floor(remainingMs / 60000);
+    const secs = Math.floor((remainingMs % 60000) / 1000);
+    return (
+      <div style={{ fontSize: 12, fontWeight: 600, color: '#d97706', marginTop: 4 }}>
+        ⚠️ {String(mins).padStart(2,'0')}:{String(secs).padStart(2,'0')} — Vai atrasar
+      </div>
+    );
+  } else {
+    // Overdue
+    const overMins = Math.floor(-remainingMs / 60000);
+    const overSecs = Math.floor((-remainingMs % 60000) / 1000);
+    return (
+      <div style={{ fontSize: 12, fontWeight: 600, color: '#dc2626', marginTop: 4 }}>
+        🔴 Atrasado {String(overMins).padStart(2,'0')}:{String(overSecs).padStart(2,'0')}
+      </div>
+    );
+  }
+}
+
+function OrderCard({ order, token, storeId, onMoved, onFinalized, col, autoPrint, deliveryMinutes }) {
   const [moving,    setMoving]    = useState(false);
   const [finishing, setFinishing] = useState(false);
 
@@ -62,6 +108,9 @@ function OrderCard({ order, token, storeId, onMoved, onFinalized, col, autoPrint
   }
 
   const colDef = COLUMNS.find(c => c.key === col);
+  const phone = order.customer?.phone || '';
+  const waPhone = phone.replace(/\D/g, '');
+  const showTimer = (col === 'preparing' || col === 'delivering') && deliveryMinutes > 0;
 
   return (
     <div className="kanban-card" style={{ borderTop: `3px solid ${colDef?.color}` }}>
@@ -72,10 +121,22 @@ function OrderCard({ order, token, storeId, onMoved, onFinalized, col, autoPrint
 
       <div className="kanban-customer">
         <span className="kanban-name">👤 {order.customer?.name || '—'}</span>
-        {order.customer?.phone && (
-          <span className="kanban-phone">📞 {order.customer.phone}</span>
+        {phone && (
+          <a
+            href={`https://wa.me/55${waPhone}`}
+            target="_blank"
+            rel="noreferrer"
+            className="kanban-phone"
+            style={{ color: '#16a34a', textDecoration: 'none', cursor: 'pointer' }}
+          >
+            📞 {phone}
+          </a>
         )}
       </div>
+
+      {showTimer && (
+        <OrderTimer createdAt={order.created_at || order.createdAt} deliveryMinutes={deliveryMinutes} />
+      )}
 
       {order.address && (
         <div className="kanban-address">📍 {order.address}</div>
@@ -136,14 +197,27 @@ function OrderCard({ order, token, storeId, onMoved, onFinalized, col, autoPrint
 }
 
 export default function OrdersPage({ token, storeId }) {
-  const [orders, setOrders]       = useState([]);
-  const [loading, setLoading]     = useState(true);
-  const [autoPrint, setAutoPrint] = useState(() => localStorage.getItem('kanban_auto_print') === 'true');
-  const [autoAccept, setAutoAccept] = useState(() => localStorage.getItem('kanban_auto_accept') === 'true');
+  const [orders, setOrders]           = useState([]);
+  const [loading, setLoading]         = useState(true);
+  const [deliveryMinutes, setDeliveryMinutes] = useState(0);
+  const [autoPrint, setAutoPrint]     = useState(() => localStorage.getItem('kanban_auto_print') === 'true');
+  const [autoAccept, setAutoAccept]   = useState(() => localStorage.getItem('kanban_auto_accept') === 'true');
   const autoAcceptRef = useRef(autoAccept);
   useEffect(() => { autoAcceptRef.current = autoAccept; }, [autoAccept]);
   const autoPrintRef = useRef(autoPrint);
   useEffect(() => { autoPrintRef.current = autoPrint; }, [autoPrint]);
+
+  // Fetch delivery time
+  useEffect(() => {
+    if (!storeId) return;
+    fetch(`/api/admin-products?type=delivery&storeId=${storeId}`, { headers: { 'x-admin-token': token } })
+      .then(r => r.json())
+      .then(d => {
+        const dt = d.delivery?.delivery_time;
+        if (dt && dt > 0) setDeliveryMinutes(dt);
+      })
+      .catch(() => {});
+  }, [token, storeId]);
 
   const acceptOrder = useCallback(async (order) => {
     await fetch('/api/admin-orders', {
@@ -170,7 +244,6 @@ export default function OrdersPage({ token, storeId }) {
           const pending = parsed.filter(o => (o.kanban_status || o.kanbanStatus || 'pending') === 'pending');
           if (pending.length > 0) {
             await Promise.all(pending.map(o => acceptOrder(o)));
-            // Update local state: flip them to preparing
             const acceptedIds = new Set(pending.map(o => String(o.id)));
             const updated = parsed.map(o =>
               acceptedIds.has(String(o.id))
@@ -191,7 +264,6 @@ export default function OrdersPage({ token, storeId }) {
 
   useEffect(() => {
     fetchOrders();
-    // Auto-refresh every 30s
     const t = setInterval(fetchOrders, 30000);
     return () => clearInterval(t);
   }, [fetchOrders]);
@@ -218,7 +290,10 @@ export default function OrdersPage({ token, storeId }) {
           <h3 style={{ fontSize: 16, color: '#1e2740', margin: 0 }}>
             🧾 Pedidos em andamento: <strong style={{ color: '#e53935' }}>{total}</strong>
           </h3>
-          <p style={{ fontSize: 12, color: '#aaa', marginTop: 4 }}>Atualiza a cada 30s automaticamente</p>
+          <p style={{ fontSize: 12, color: '#aaa', marginTop: 4 }}>
+            Atualiza a cada 30s automaticamente
+            {deliveryMinutes > 0 && <span style={{ marginLeft: 8 }}>· ⏱️ Entrega estimada: {deliveryMinutes}min</span>}
+          </p>
         </div>
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
           <button className="adm-btn ghost" onClick={fetchOrders} style={{ fontSize: 13 }}>🔄 Atualizar</button>
@@ -229,7 +304,7 @@ export default function OrdersPage({ token, storeId }) {
               const next = !autoAccept;
               setAutoAccept(next);
               localStorage.setItem('kanban_auto_accept', String(next));
-              if (next) fetchOrders(); // run immediately when turned ON
+              if (next) fetchOrders();
             }}
           >
             ✅ Aceitar auto: {autoAccept ? 'ON' : 'OFF'}
@@ -264,7 +339,17 @@ export default function OrdersPage({ token, storeId }) {
                   <div className="kanban-empty">Nenhum pedido</div>
                 ) : (
                   colOrders.map(o => (
-                    <OrderCard key={o.id} order={o} token={token} storeId={storeId} onMoved={handleMoved} onFinalized={handleFinalized} col={col.key} autoPrint={autoPrint} />
+                    <OrderCard
+                      key={o.id}
+                      order={o}
+                      token={token}
+                      storeId={storeId}
+                      onMoved={handleMoved}
+                      onFinalized={handleFinalized}
+                      col={col.key}
+                      autoPrint={autoPrint}
+                      deliveryMinutes={deliveryMinutes}
+                    />
                   ))
                 )}
               </div>

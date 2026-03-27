@@ -3,6 +3,8 @@ import { useState, useEffect } from 'react';
 export default function DeliveryAreaPage({ token, storeId }) {
   const [address, setAddress] = useState('');
   const [areas, setAreas] = useState([]);
+  const [deliveryTime, setDeliveryTime] = useState('');
+  const [minOrder, setMinOrder] = useState('');
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   // New area form
@@ -20,16 +22,24 @@ export default function DeliveryAreaPage({ token, storeId }) {
       .then(d => {
         setAddress(d.delivery?.address || '');
         setAreas(d.delivery?.areas || []);
+        setDeliveryTime(d.delivery?.delivery_time != null ? String(d.delivery.delivery_time) : '');
+        setMinOrder(d.delivery?.min_order != null ? String(d.delivery.min_order / 100) : '');
       })
       .catch(() => {});
   }, [token, storeId]);
 
   async function save() {
     setSaving(true);
+    const deliveryPayload = {
+      address,
+      areas,
+      delivery_time: deliveryTime !== '' ? Number(deliveryTime) : null,
+      min_order: minOrder !== '' ? Math.round(Number(minOrder) * 100) : 0,
+    };
     await fetch('/api/admin-products?type=delivery', {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json', 'x-admin-token': token, 'x-store-id': storeId },
-      body: JSON.stringify({ delivery: { address, areas } }),
+      body: JSON.stringify({ delivery: deliveryPayload }),
     });
     setSaving(false);
     setSaved(true);
@@ -93,6 +103,40 @@ export default function DeliveryAreaPage({ token, storeId }) {
               />
             </div>
           )}
+        </div>
+      </div>
+
+      {/* Delivery settings */}
+      <div className="adm-card">
+        <div className="adm-card-header">
+          <h3>⚙️ Configurações de Entrega</h3>
+        </div>
+        <div className="adm-card-body" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+          <div>
+            <label className="adm-label">⏱️ Tempo de entrega estimado (minutos)</label>
+            <input
+              className="adm-input"
+              type="number"
+              min="1"
+              placeholder="Ex: 45"
+              value={deliveryTime}
+              onChange={e => setDeliveryTime(e.target.value)}
+            />
+            <p style={{ fontSize: 12, color: '#aaa', marginTop: 4 }}>Exibido no timer do Kanban para acompanhar entregas.</p>
+          </div>
+          <div>
+            <label className="adm-label">💰 Pedido mínimo (R$)</label>
+            <input
+              className="adm-input"
+              type="number"
+              min="0"
+              step="0.01"
+              placeholder="Ex: 30.00 (0 = sem mínimo)"
+              value={minOrder}
+              onChange={e => setMinOrder(e.target.value)}
+            />
+            <p style={{ fontSize: 12, color: '#aaa', marginTop: 4 }}>Cliente só avança com carrinho acima deste valor.</p>
+          </div>
         </div>
       </div>
 

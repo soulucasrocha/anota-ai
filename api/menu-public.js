@@ -22,17 +22,27 @@ export default async function handler(req, res) {
     }
     if (!storeId) return res.status(200).json({ source: 'static', paymentMethods: { pix_online: true } });
 
-    // Get store info + payment methods in parallel
+    // Get store info + payment methods + delivery in parallel
     const [{ data: storeInfo }, { data: settings }] = await Promise.all([
-      sb().from('stores').select('name, logo_url, whatsapp').eq('id', storeId).maybeSingle(),
-      sb().from('store_settings').select('payment_methods').eq('store_id', storeId).maybeSingle(),
+      sb().from('stores').select('name, logo_url, whatsapp, hours').eq('id', storeId).maybeSingle(),
+      sb().from('store_settings').select('payment_methods, delivery').eq('store_id', storeId).maybeSingle(),
     ]);
     const paymentMethods = settings?.payment_methods || { pix_online: true, card_online: false, card_delivery: false, pix_delivery: false, cash: false };
+    const defaultPayment = settings?.payment_methods?._default || null;
+    const delivery = settings?.delivery || {};
+    const minOrder = delivery?.min_order || 0;
 
-    // Get products
+    // Get products (only active ones)
     const { data: products } = await sb().from('products').select('id,category,name,description,price,old_price,tag,img,active,sold_out,steps').eq('store_id', storeId).eq('active', true);
 
-    const storeMeta = { storeName: storeInfo?.name || '', storeLogoUrl: storeInfo?.logo_url || '', storeWhatsapp: storeInfo?.whatsapp || '' };
+    const storeMeta = {
+      storeName: storeInfo?.name || '',
+      storeLogoUrl: storeInfo?.logo_url || '',
+      storeWhatsapp: storeInfo?.whatsapp || '',
+      storeHours: storeInfo?.hours || [],
+      defaultPayment,
+      minOrder,
+    };
 
     if (!products || !products.length) {
       return res.status(200).json({ source: 'static', paymentMethods, storeId, ...storeMeta });
