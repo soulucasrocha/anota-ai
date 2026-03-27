@@ -156,24 +156,58 @@ function OrderCard({ order, token, storeId, onMoved, onFinalized, col, autoPrint
 }
 
 export default function OrdersPage({ token, storeId }) {
-  const [orders, setOrders]   = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [orders, setOrders]       = useState([]);
+  const [loading, setLoading]     = useState(true);
   const [autoPrint, setAutoPrint] = useState(() => localStorage.getItem('kanban_auto_print') === 'true');
+  const [autoAccept, setAutoAccept] = useState(() => localStorage.getItem('kanban_auto_accept') === 'true');
+  const autoAcceptRef = useRef(autoAccept);
+  useEffect(() => { autoAcceptRef.current = autoAccept; }, [autoAccept]);
+  const autoPrintRef = useRef(autoPrint);
+  useEffect(() => { autoPrintRef.current = autoPrint; }, [autoPrint]);
+
+  const acceptOrder = useCallback(async (order) => {
+    await fetch('/api/admin-orders', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json', 'x-admin-token': token, 'x-store-id': storeId || '' },
+      body: JSON.stringify({ id: order.id, kanbanStatus: 'preparing' }),
+    });
+    if (autoPrintRef.current) printOrder(order);
+    return order.id;
+  }, [token, storeId]);
 
   const fetchOrders = useCallback(() => {
     if (!storeId) return;
     fetch('/api/admin-orders', { headers: { 'x-admin-token': token, 'x-store-id': storeId } })
       .then(r => r.json())
-      .then(d => {
+      .then(async d => {
         const raw = d.orders || [];
         const parsed = raw.map(x => {
           try { return typeof x === 'string' ? JSON.parse(x) : x; } catch { return null; }
         }).filter(Boolean);
+
+        // Auto-accept: move all pending → preparing automatically
+        if (autoAcceptRef.current) {
+          const pending = parsed.filter(o => (o.kanban_status || o.kanbanStatus || 'pending') === 'pending');
+          if (pending.length > 0) {
+            await Promise.all(pending.map(o => acceptOrder(o)));
+            // Update local state: flip them to preparing
+            const acceptedIds = new Set(pending.map(o => String(o.id)));
+            const updated = parsed.map(o =>
+              acceptedIds.has(String(o.id))
+                ? { ...o, kanban_status: 'preparing', kanbanStatus: 'preparing' }
+                : o
+            );
+            setOrders(updated);
+            setLoading(false);
+            return;
+          }
+        }
+
         setOrders(parsed);
         setLoading(false);
       })
       .catch(() => setLoading(false));
-  }, [token, storeId]);
+  }, [token, storeId, acceptOrder]);
 
   useEffect(() => {
     fetchOrders();
@@ -206,8 +240,20 @@ export default function OrdersPage({ token, storeId }) {
           </h3>
           <p style={{ fontSize: 12, color: '#aaa', marginTop: 4 }}>Atualiza a cada 30s automaticamente</p>
         </div>
-        <div style={{ display: 'flex', gap: 8 }}>
+        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
           <button className="adm-btn ghost" onClick={fetchOrders} style={{ fontSize: 13 }}>🔄 Atualizar</button>
+          <button
+            className={`adm-btn${autoAccept ? ' primary' : ' ghost'}`}
+            style={{ fontSize: 13, background: autoAccept ? '#16a34a' : undefined, borderColor: autoAccept ? '#16a34a' : undefined }}
+            onClick={() => {
+              const next = !autoAccept;
+              setAutoAccept(next);
+              localStorage.setItem('kanban_auto_accept', String(next));
+              if (next) fetchOrders(); // run immediately when turned ON
+            }}
+          >
+            ✅ Aceitar auto: {autoAccept ? 'ON' : 'OFF'}
+          </button>
           <button
             className={`adm-btn${autoPrint ? ' primary' : ' ghost'}`}
             style={{ fontSize: 13 }}

@@ -34,7 +34,7 @@ export default async function handler(req, res) {
     status: status || (isDeliveryPay ? 'pending' : 'paid'),
     payment_method: paymentMethod || 'pix_online',
     delivery_payment: isDeliveryPay,
-    kanban_status: isDeliveryPay ? 'pending' : 'preparing',
+    kanban_status: 'pending',
     change_for: changeFor || null,
     change_note: changeNote || null,
     created_at: new Date().toISOString(),
