@@ -19,7 +19,7 @@ export default async function handler(req, res) {
   }
 
   // Default: save order
-  const { pixId, items, total, customer, address, status, paymentMethod, deliveryPayment } = req.body || {};
+  const { pixId, items, total, customer, address, status, paymentMethod, deliveryPayment, changeFor, changeNote } = req.body || {};
   if (!total) return res.status(400).json({ error: 'missing total' });
 
   const isDeliveryPay = deliveryPayment === true || ['card_delivery', 'pix_delivery', 'cash'].includes(paymentMethod);
@@ -35,6 +35,8 @@ export default async function handler(req, res) {
     payment_method: paymentMethod || 'pix_online',
     delivery_payment: isDeliveryPay,
     kanban_status: isDeliveryPay ? 'pending' : 'preparing',
+    change_for: changeFor || null,
+    change_note: changeNote || null,
     created_at: new Date().toISOString(),
   };
 

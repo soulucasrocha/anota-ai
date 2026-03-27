@@ -551,3 +551,7 @@ body.admin-body #root {
 @media (max-width: 600px) {
   .kanban-board { grid-template-columns: 1fr; }
 }
+
+/* ── Delivery area page ─── */
+.adm-btn.danger { background: #fee2e2; color: #dc2626; border: 1px solid #fca5a5; }
+.adm-btn.danger:hover { background: #fecaca; }

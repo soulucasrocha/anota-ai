@@ -8,6 +8,7 @@ const NAV = [
   { key: 'payments',     icon: '💲', label: 'Formas de Pagamento'  },
   { key: 'profile',      icon: '🏪', label: 'Perfil da Loja'       },
   { key: 'tracking',     icon: '📡', label: 'Rastreamento'         },
+  { key: 'delivery',     icon: '🗺️', label: 'Área de Entrega'      },
   { key: 'printer',      icon: '🖨️', label: 'Impressora'           },
 ];
 
@@ -20,7 +21,7 @@ export default function AdminLayout({ page, setPage, onLogout, children, stores,
     dashboard: 'Dashboard', products: 'Gestão de Produtos',
     orders: 'Pedidos (Kanban)', transactions: 'Transações PIX',
     payments: 'Formas de Pagamento', profile: 'Perfil da Loja',
-    tracking: 'Rastreamento', printer: 'Impressora',
+    tracking: 'Rastreamento', delivery: 'Área de Entrega', printer: 'Impressora',
   };
 
   function handleCreateStore(e) {

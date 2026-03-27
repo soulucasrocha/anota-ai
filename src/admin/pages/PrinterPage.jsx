@@ -7,6 +7,37 @@ const PAPER_WIDTHS = [
 
 export default function PrinterPage({ store }) {
   const [paperWidth, setPaperWidth] = useState(() => Number(localStorage.getItem('print_paper_width') || 300));
+  const [printers, setPrinters] = useState(() => {
+    try { return JSON.parse(localStorage.getItem('saved_printers') || '[]'); } catch { return []; }
+  });
+  const [activePrinter, setActivePrinter] = useState(() => localStorage.getItem('active_printer') || '');
+  const [newPrinterName, setNewPrinterName] = useState('');
+
+  function addPrinter() {
+    if (!newPrinterName.trim()) return;
+    const updated = [...printers, newPrinterName.trim()];
+    setPrinters(updated);
+    localStorage.setItem('saved_printers', JSON.stringify(updated));
+    if (!activePrinter) {
+      setActivePrinter(newPrinterName.trim());
+      localStorage.setItem('active_printer', newPrinterName.trim());
+    }
+    setNewPrinterName('');
+  }
+  function removePrinter(name) {
+    const updated = printers.filter(p => p !== name);
+    setPrinters(updated);
+    localStorage.setItem('saved_printers', JSON.stringify(updated));
+    if (activePrinter === name) {
+      const next = updated[0] || '';
+      setActivePrinter(next);
+      localStorage.setItem('active_printer', next);
+    }
+  }
+  function selectPrinter(name) {
+    setActivePrinter(name);
+    localStorage.setItem('active_printer', name);
+  }
 
   function savePaperWidth(w) {
     setPaperWidth(w);
@@ -47,6 +78,37 @@ export default function PrinterPage({ store }) {
 
   return (
     <>
+      {/* Impressoras cadastradas */}
+      <div className="adm-card" style={{ marginBottom: 0 }}>
+        <div className="adm-card-header"><h3>🖨️ Impressoras Cadastradas</h3></div>
+        <div className="adm-card-body" style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+          <p style={{ fontSize: 13, color: '#666' }}>Cadastre o nome das suas impressoras térmicas. A impressora ativa será selecionada automaticamente ao imprimir.</p>
+
+          <div style={{ display: 'flex', gap: 8 }}>
+            <input className="adm-input" placeholder="Nome da impressora (ex: Térmica 80mm)" value={newPrinterName} onChange={e => setNewPrinterName(e.target.value)} onKeyDown={e => e.key === 'Enter' && addPrinter()} style={{ flex: 1 }} />
+            <button className="adm-btn primary" onClick={addPrinter} disabled={!newPrinterName.trim()}>Adicionar</button>
+          </div>
+
+          {printers.length === 0 ? (
+            <p style={{ fontSize: 13, color: '#bbb', textAlign: 'center', padding: '12px 0' }}>Nenhuma impressora cadastrada</p>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+              {printers.map(p => (
+                <div key={p} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 14px', background: activePrinter === p ? '#eff6ff' : '#f9fafb', borderRadius: 10, border: `1.5px solid ${activePrinter === p ? '#3b82f6' : '#e5e7eb'}` }}>
+                  <span style={{ flex: 1, fontWeight: activePrinter === p ? 700 : 400, color: activePrinter === p ? '#1d4ed8' : '#374151' }}>
+                    {activePrinter === p ? '✅ ' : ''}{p}
+                  </span>
+                  {activePrinter !== p && (
+                    <button className="adm-btn ghost" style={{ fontSize: 12, padding: '4px 10px' }} onClick={() => selectPrinter(p)}>Ativar</button>
+                  )}
+                  <button className="adm-btn danger" style={{ fontSize: 12, padding: '4px 10px' }} onClick={() => removePrinter(p)}>🗑️</button>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+
       <div className="adm-card">
         <div className="adm-card-header">
           <h3>🖨️ Configuração da Impressora</h3>

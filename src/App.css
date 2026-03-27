@@ -1307,3 +1307,35 @@ body {
   font-size: 15px; font-weight: 800; color: #1a1a1a;
   border-top: 1.5px solid #e5e7eb; margin-top: 4px;
 }
+
+/* ── Cash change box ── */
+.cash-change-box {
+  margin-top: 12px;
+  background: #f0fdf4;
+  border: 1.5px solid #bbf7d0;
+  border-radius: 12px;
+  padding: 14px 16px;
+}
+.cash-change-label {
+  font-size: 13px;
+  font-weight: 700;
+  color: #15803d;
+  display: block;
+  margin-bottom: 4px;
+}
+.cash-change-info {
+  font-size: 13px;
+  color: #16a34a;
+  font-weight: 600;
+  margin-top: 8px;
+}
+/* ── Disabled payment option ── */
+.pay-option.disabled {
+  background: #f9fafb;
+  border-color: #e5e7eb;
+}
+.pay-badge.disabled-badge {
+  background: #f3f4f6;
+  color: #9ca3af;
+  font-size: 11px;
+}

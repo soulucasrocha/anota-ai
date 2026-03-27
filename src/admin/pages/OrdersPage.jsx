@@ -101,6 +101,12 @@ function OrderCard({ order, token, storeId, onMoved, onFinalized, col, autoPrint
         <div className="kanban-address">📍 {order.address}</div>
       )}
 
+      {order.change_note && (
+        <div className="kanban-address" style={{ color: '#15803d', fontWeight: 600 }}>
+          💵 {order.change_note}
+        </div>
+      )}
+
       {(order.payment_method || order.paymentMethod) && (() => {
         const pm = PM_LABEL[order.payment_method || order.paymentMethod];
         return pm ? (

@@ -32,6 +32,21 @@ export default async function handler(req, res) {
     return res.status(405).end();
   }
 
+  // ── Delivery config ────────────────────────────────────────────────────
+  if (req.query.type === 'delivery') {
+    const storeId = req.query.storeId || req.body?.storeId || req.headers['x-store-id'];
+    if (!storeId) return res.status(400).json({ error: 'missing storeId' });
+    if (req.method === 'GET') {
+      const { data } = await sb().from('store_settings').select('delivery').eq('store_id', storeId).maybeSingle();
+      return res.status(200).json({ delivery: data?.delivery || { address: '', areas: [] } });
+    }
+    if (req.method === 'PATCH' || req.method === 'POST') {
+      const { delivery } = req.body || {};
+      await sb().from('store_settings').upsert({ store_id: storeId, delivery }, { onConflict: 'store_id' });
+      return res.status(200).json({ ok: true });
+    }
+  }
+
   // ── Tracking config ────────────────────────────────────────────────────
   if (req.query.type === 'tracking') {
     if (!storeId) return res.status(400).json({ error: 'missing storeId' });

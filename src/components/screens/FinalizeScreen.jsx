@@ -28,6 +28,7 @@ export default function FinalizeScreen({ active, address, onAddressChange, getCa
   const [searching,   setSearching]   = useState(false);
   const [payMethods,  setPayMethods]  = useState({ pix_online: true });
   const [selectedPay, setSelectedPay] = useState('pix_online');
+  const [changeFor,   setChangeFor]   = useState('');
   const debouncedAddress = useDebounce(address, 500);
   const inputRef = useRef(null);
 
@@ -74,10 +75,12 @@ export default function FinalizeScreen({ active, address, onAddressChange, getCa
     inputRef.current?.blur();
   }, [onAddressChange]);
 
-  const enabledMethods = Object.keys(PM_INFO).filter(k => payMethods[k]);
+  const hasEnabledPay = Object.keys(PM_INFO).some(k => payMethods[k]);
+  const isPayDisabled = !payMethods[selectedPay];
 
   const btnLabel = () => {
     if (!hasAddress) return 'Informe o endereço';
+    if (!hasEnabledPay) return 'Sem forma de pagamento';
     const info = PM_INFO[selectedPay];
     if (info?.online) return `Ir para pagamento • ${fmtPrice(total)}`;
     return `Confirmar pedido • ${fmtPrice(total)}`;
@@ -134,28 +137,47 @@ export default function FinalizeScreen({ active, address, onAddressChange, getCa
         {/* Forma de pagamento */}
         <div className="finalize-section">
           <h4 className="finalize-section-title">Forma de pagamento</h4>
-          {enabledMethods.length === 0 ? (
-            <p style={{ fontSize: 13, color: '#aaa' }}>Nenhuma forma de pagamento disponível.</p>
-          ) : (
-            enabledMethods.map(key => {
-              const info = PM_INFO[key];
-              const sel  = selectedPay === key;
-              return (
-                <div
-                  key={key}
-                  className={'pay-option' + (sel ? ' selected' : '')}
-                  onClick={() => setSelectedPay(key)}
-                  style={{ cursor: 'pointer' }}
-                >
-                  <div className="pay-option-icon">{info.icon}</div>
-                  <div className="pay-option-info">
-                    <span className="pay-option-name">{info.label}</span>
-                    <span className="pay-option-desc">{info.desc}</span>
-                  </div>
-                  {sel && <span className="pay-badge">Selecionado</span>}
+          {Object.keys(PM_INFO).map(key => {
+            const info = PM_INFO[key];
+            const sel = selectedPay === key;
+            const enabled = !!payMethods[key];
+            return (
+              <div
+                key={key}
+                className={'pay-option' + (sel ? ' selected' : '') + (!enabled ? ' disabled' : '')}
+                onClick={() => enabled && setSelectedPay(key)}
+                style={{ cursor: enabled ? 'pointer' : 'not-allowed' }}
+              >
+                <div className="pay-option-icon" style={!enabled ? { opacity: 0.4 } : {}}>{info.icon}</div>
+                <div className="pay-option-info">
+                  <span className="pay-option-name" style={!enabled ? { color: '#aaa' } : {}}>{info.label}</span>
+                  <span className="pay-option-desc" style={!enabled ? { color: '#ccc' } : {}}>{info.desc}</span>
                 </div>
-              );
-            })
+                {!enabled && <span className="pay-badge disabled-badge">Desativado</span>}
+                {enabled && sel && <span className="pay-badge">Selecionado</span>}
+              </div>
+            );
+          })}
+          {/* Cash change field */}
+          {selectedPay === 'cash' && (
+            <div className="cash-change-box">
+              <label className="cash-change-label">💵 Troco para quanto? <span style={{color:'#aaa',fontWeight:400}}>(opcional)</span></label>
+              <input
+                type="number"
+                className="checkout-input"
+                placeholder="Ex: 100"
+                value={changeFor}
+                onChange={e => setChangeFor(e.target.value)}
+                style={{ marginTop: 8 }}
+              />
+              {changeFor && Number(changeFor) > 0 && (
+                <p className="cash-change-info">
+                  {Number(changeFor) * 100 > total
+                    ? `Troco: ${fmtPrice(Number(changeFor) * 100 - total)}`
+                    : '✅ Sem troco necessário'}
+                </p>
+              )}
+            </div>
           )}
         </div>
 
@@ -191,8 +213,8 @@ export default function FinalizeScreen({ active, address, onAddressChange, getCa
       <div className="screen-footer">
         <button
           className="screen-advance-btn"
-          disabled={!hasAddress || enabledMethods.length === 0}
-          onClick={() => hasAddress && onAdvance(selectedPay)}
+          disabled={!hasAddress || isPayDisabled}
+          onClick={() => hasAddress && !isPayDisabled && onAdvance(selectedPay, changeFor ? Number(changeFor) : null)}
         >
           {btnLabel()}
         </button>

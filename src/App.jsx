@@ -214,9 +214,14 @@ export default function App() {
 
   // ── Delivery order handler ─────────────────────────────────────────────────
 
-  const handleDeliveryOrder = useCallback(async (method) => {
+  const handleDeliveryOrder = useCallback(async (method, changeFor) => {
     const items = Object.values(cart).map(({ item, qty }) => ({ id: item.id, name: item.name, qty, price: item.price }));
     const orderId = `del-${Date.now()}`;
+    const total = getCartTotal();
+    // Build change note if cash payment
+    const changeNote = (method === 'cash' && changeFor && changeFor * 100 > total)
+      ? `Troco para R$${changeFor.toFixed(2).replace('.',',')} (R$${((changeFor * 100 - total) / 100).toFixed(2).replace('.',',')} de troco)`
+      : null;
     try {
       await fetch('/api/order-save', {
         method: 'POST',
@@ -224,12 +229,14 @@ export default function App() {
         body: JSON.stringify({
           pixId: orderId,
           items,
-          total: getCartTotal(),
+          total,
           customer: { name: checkoutName, phone: checkoutPhone },
           address,
           paymentMethod: method,
           deliveryPayment: true,
           storeId: storeId || undefined,
+          changeFor: changeFor || null,
+          changeNote: changeNote || null,
         }),
       });
     } catch {}
@@ -237,7 +244,7 @@ export default function App() {
     try {
       localStorage.setItem('delivery_order_v1', JSON.stringify({
         orderId,
-        amount: getCartTotal(),
+        amount: total,
         paymentMethod: method,
         expiry: Date.now() + 86400000,
       }));
@@ -307,13 +314,13 @@ export default function App() {
         onAddressChange={setAddress}
         getCartTotal={getCartTotal}
         onBack={() => setScreen('checkout')}
-        onAdvance={(method) => {
+        onAdvance={(method, changeFor) => {
           setPaymentMethod(method);
           const isOnline = method === 'pix_online' || method === 'card_online';
           if (isOnline) {
             setScreen('pix');
           } else {
-            handleDeliveryOrder(method);
+            handleDeliveryOrder(method, changeFor);
           }
         }}
         geoData={geoData}
