@@ -13,10 +13,16 @@ import PrinterPage        from './pages/PrinterPage';
 import DeliveryAreaPage   from './pages/DeliveryAreaPage';
 
 export default function AdminApp() {
-  const [token,   setToken]   = useState(() => localStorage.getItem('adm_token') || null);
-  const [page,    setPage]    = useState('dashboard');
-  const [stores,  setStores]  = useState([]);
-  const [storeId, setStoreId] = useState(() => localStorage.getItem('adm_store') || null);
+  const [token,    setToken]    = useState(() => localStorage.getItem('adm_token') || null);
+  const [pageState, setPageState] = useState(() => localStorage.getItem('adm_page') || 'dashboard');
+  const [stores,   setStores]  = useState([]);
+  const [storeId,  setStoreId] = useState(() => localStorage.getItem('adm_store') || null);
+
+  function setPage(p) {
+    setPageState(p);
+    localStorage.setItem('adm_page', p);
+  }
+  const page = pageState;
 
   useEffect(() => { document.body.classList.add('admin-body'); return () => document.body.classList.remove('admin-body'); }, []);
 

@@ -108,6 +108,7 @@ export default function App() {
   const [storeWhatsapp, setStoreWhatsapp]       = useState('');
   const [paymentMethod, setPaymentMethod]       = useState(() => _s?.paymentMethod || 'pix_online');
   const [deliveryOrderId, setDeliveryOrderId]   = useState(() => _s?.deliveryOrderId || null);
+  const [deliveryChangeNote, setDeliveryChangeNote] = useState(() => _s?.deliveryChangeNote || null);
 
   // Wrapper de setScreen que salva na sessão
   const setScreen = useCallback((s) => {
@@ -117,8 +118,8 @@ export default function App() {
   // Salva sessão sempre que estado relevante muda
   useEffect(() => {
     if (screen === 'pix') return; // PIX tem própria persistência
-    saveSession({ screen, cart, checkoutName, checkoutPhone, address, paymentMethod, deliveryOrderId });
-  }, [screen, cart, checkoutName, checkoutPhone, address, paymentMethod, deliveryOrderId]);
+    saveSession({ screen, cart, checkoutName, checkoutPhone, address, paymentMethod, deliveryOrderId, deliveryChangeNote });
+  }, [screen, cart, checkoutName, checkoutPhone, address, paymentMethod, deliveryOrderId, deliveryChangeNote]);
 
   // ── Dynamic menu (from admin blob) ────────────────────────────────────────
   useEffect(() => {
@@ -253,6 +254,7 @@ export default function App() {
     } catch {}
     setDeliveryOrderId(orderId);
     setPaymentMethod(method);
+    setDeliveryChangeNote(changeNote);
     setScreen('delivery-waiting');
   }, [cart, getCartTotal, checkoutName, checkoutPhone, address, setScreen]);
 
@@ -350,6 +352,7 @@ export default function App() {
         customer={{ name: checkoutName, phone: checkoutPhone }}
         deliveryAddress={address}
         paymentMethod={paymentMethod}
+        changeNote={deliveryChangeNote}
         storeWhatsapp={storeWhatsapp}
         storeName={storeName}
         onBack={() => setScreen('finalize')}

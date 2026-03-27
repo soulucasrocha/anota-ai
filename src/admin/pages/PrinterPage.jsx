@@ -25,13 +25,16 @@ export default function PrinterPage({ store }) {
   const [qzPrinters,     setQzPrinters]     = useState([]);
 
   useEffect(() => {
-    async function check() {
-      setQzStatus('checking');
+    async function check(isRetry = false) {
+      if (!isRetry) setQzStatus('checking');
       const ok = await connectQZ();
       if (ok) {
         setQzStatus('connected');
         const list = await getQZPrinters();
         setQzPrinters(list);
+      } else if (!isRetry) {
+        // QZ Tray might still be initializing — retry once after 2s
+        setTimeout(() => check(true), 2000);
       } else {
         setQzStatus('disconnected');
       }
@@ -47,7 +50,17 @@ export default function PrinterPage({ store }) {
       const list = await getQZPrinters();
       setQzPrinters(list);
     } else {
-      setQzStatus('disconnected');
+      // Retry once after 2 seconds
+      setTimeout(async () => {
+        const ok2 = await connectQZ();
+        if (ok2) {
+          setQzStatus('connected');
+          const list = await getQZPrinters();
+          setQzPrinters(list);
+        } else {
+          setQzStatus('disconnected');
+        }
+      }, 2000);
     }
   }
 

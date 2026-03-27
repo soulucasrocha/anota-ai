@@ -36,7 +36,7 @@ const PM_NAME = {
   cash:          'Dinheiro',
 };
 
-function buildWhatsappUrl(whatsapp, { orderId, cart, customer, deliveryAddress, paymentMethod, amount }) {
+function buildWhatsappUrl(whatsapp, { orderId, cart, customer, deliveryAddress, paymentMethod, amount, changeNote }) {
   const num = '55' + whatsapp.replace(/\D/g, '');
   const items = cart
     ? Object.values(cart).map(({ item, qty }) => `  ${qty}x ${item.name}`).join('\n')
@@ -54,11 +54,12 @@ function buildWhatsappUrl(whatsapp, { orderId, cart, customer, deliveryAddress, 
     ``,
     total ? `Total: ${total}` : '',
     paymentMethod ? `Pagamento: ${PM_NAME[paymentMethod] || paymentMethod}` : '',
+    changeNote ? changeNote : '',
   ].filter(Boolean).join('\n');
   return `https://wa.me/${num}?text=${encodeURIComponent(msg)}`;
 }
 
-export default function DeliveryWaitingScreen({ active, orderId, amount, cart, customer, deliveryAddress, paymentMethod, storeWhatsapp, storeName, onBack, onDone }) {
+export default function DeliveryWaitingScreen({ active, orderId, amount, cart, customer, deliveryAddress, paymentMethod, changeNote, storeWhatsapp, storeName, onBack, onDone }) {
   const [orderStatus, setOrderStatus] = useState('pending');
   const [linkCopied, setLinkCopied]   = useState(false);
   const pollRef     = useRef(null);
@@ -191,13 +192,18 @@ export default function DeliveryWaitingScreen({ active, orderId, amount, cart, c
             <p className="tracking-address-text" style={{ color: '#e8001d', fontWeight: 700 }}>
               {PM_LABEL[paymentMethod] || 'Pagamento na entrega'}
             </p>
+            {changeNote && (
+              <p style={{ color: '#15803d', fontWeight: 600, fontSize: 13, marginTop: 4 }}>
+                💵 {changeNote}
+              </p>
+            )}
           </div>
         </div>
 
         {/* WhatsApp button (no lugar do copiar link) */}
         {storeWhatsapp && (
           <a
-            href={buildWhatsappUrl(storeWhatsapp, { orderId: orderIdRef.current, cart, customer, deliveryAddress, paymentMethod, amount: amountRef.current })}
+            href={buildWhatsappUrl(storeWhatsapp, { orderId: orderIdRef.current, cart, customer, deliveryAddress, paymentMethod, amount: amountRef.current, changeNote })}
             target="_blank"
             rel="noreferrer"
             style={{
