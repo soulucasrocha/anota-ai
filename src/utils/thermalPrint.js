@@ -63,7 +63,7 @@ async function getCryptoKey() {
   const der = Uint8Array.from(atob(pem), c => c.charCodeAt(0));
   _cryptoKey = await crypto.subtle.importKey(
     'pkcs8', der.buffer,
-    { name: 'RSASSA-PKCS1-v1_5', hash: 'SHA-512' },
+    { name: 'RSASSA-PKCS1-v1_5', hash: 'SHA-1' },
     false, ['sign']
   );
   return _cryptoKey;
@@ -73,9 +73,10 @@ async function signRequest(toSign) {
   try {
     const key = await getCryptoKey();
     const enc = new TextEncoder();
-    const sig = await crypto.subtle.sign('RSASSA-PKCS1-v1_5', key, enc.encode(toSign));
+    const sig = await crypto.subtle.sign('RSASSA-PKCS1-v1_5', key, enc.encode(String(toSign)));
     return btoa(String.fromCharCode(...new Uint8Array(sig)));
-  } catch {
+  } catch (e) {
+    console.error('QZ sign error:', e);
     return '';
   }
 }
