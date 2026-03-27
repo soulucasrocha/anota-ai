@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 
 const DAYS = [
   { key: 'seg', label: 'Segunda' },
@@ -27,6 +27,17 @@ export default function StoreProfilePage({ token, storeId, store, onUpdated }) {
   const [hours,     setHours]     = useState(() => initHours(store?.hours));
   const [saving,    setSaving]    = useState(false);
   const [saved,     setSaved]     = useState(false);
+
+  // Sincroniza campos quando store carrega/muda (ex: após refresh)
+  useEffect(() => {
+    if (!store) return;
+    setName(store.name || '');
+    setSlug(store.slug || '');
+    setLogoUrl(store.logo_url || '');
+    setWhatsapp(store.whatsapp || '');
+    setHours(initHours(store.hours));
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [store?.id]);
 
   function handleNameChange(val) {
     setName(val);
