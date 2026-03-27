@@ -295,32 +295,7 @@ export default function OrdersPage({ token, storeId }) {
             {deliveryMinutes > 0 && <span style={{ marginLeft: 8 }}>· ⏱️ Entrega estimada: {deliveryMinutes}min</span>}
           </p>
         </div>
-        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-          <button className="adm-btn ghost" onClick={fetchOrders} style={{ fontSize: 13 }}>🔄 Atualizar</button>
-          <button
-            className={`adm-btn${autoAccept ? ' primary' : ' ghost'}`}
-            style={{ fontSize: 13, background: autoAccept ? '#16a34a' : undefined, borderColor: autoAccept ? '#16a34a' : undefined }}
-            onClick={() => {
-              const next = !autoAccept;
-              setAutoAccept(next);
-              localStorage.setItem('kanban_auto_accept', String(next));
-              if (next) fetchOrders();
-            }}
-          >
-            ✅ Aceitar auto: {autoAccept ? 'ON' : 'OFF'}
-          </button>
-          <button
-            className={`adm-btn${autoPrint ? ' primary' : ' ghost'}`}
-            style={{ fontSize: 13 }}
-            onClick={() => {
-              const next = !autoPrint;
-              setAutoPrint(next);
-              localStorage.setItem('kanban_auto_print', String(next));
-            }}
-          >
-            🖨️ Auto-imprimir: {autoPrint ? 'ON' : 'OFF'}
-          </button>
-        </div>
+        <button className="adm-btn ghost" onClick={fetchOrders} style={{ fontSize: 13 }}>🔄 Atualizar</button>
       </div>
 
       <div className="kanban-board">
@@ -328,6 +303,35 @@ export default function OrdersPage({ token, storeId }) {
           const colOrders = byCol(col.key);
           return (
             <div key={col.key} className="kanban-col">
+              {/* Button above Pendente column */}
+              {col.key === 'pending' && (
+                <button
+                  className={`adm-btn${autoAccept ? ' primary' : ' ghost'}`}
+                  style={{ fontSize: 12, width: '100%', marginBottom: 6, background: autoAccept ? '#16a34a' : undefined, borderColor: autoAccept ? '#16a34a' : undefined }}
+                  onClick={() => {
+                    const next = !autoAccept;
+                    setAutoAccept(next);
+                    localStorage.setItem('kanban_auto_accept', String(next));
+                    if (next) fetchOrders();
+                  }}
+                >
+                  ✅ Aceitar auto: {autoAccept ? 'ON' : 'OFF'}
+                </button>
+              )}
+              {/* Button above Em Preparo column */}
+              {col.key === 'preparing' && (
+                <button
+                  className={`adm-btn${autoPrint ? ' primary' : ' ghost'}`}
+                  style={{ fontSize: 12, width: '100%', marginBottom: 6 }}
+                  onClick={() => {
+                    const next = !autoPrint;
+                    setAutoPrint(next);
+                    localStorage.setItem('kanban_auto_print', String(next));
+                  }}
+                >
+                  🖨️ Auto-imprimir: {autoPrint ? 'ON' : 'OFF'}
+                </button>
+              )}
               <div className="kanban-col-header" style={{ borderBottom: `2px solid ${col.color}` }}>
                 <span className="kanban-col-icon">{col.emoji}</span>
                 <span className="kanban-col-label">{col.label}</span>

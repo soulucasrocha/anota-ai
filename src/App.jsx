@@ -307,7 +307,7 @@ export default function App() {
     setDeliveryChangeNote(changeNote);
     setDeliveryChangeFor(changeFor || null);
     setScreen('delivery-waiting');
-  }, [cart, getCartTotal, checkoutName, checkoutPhone, address, setScreen]);
+  }, [cart, getCartTotal, checkoutName, checkoutPhone, address, storeId, setScreen]);
 
   // ─────────────────────────────────────────────────────────────────────────
 

@@ -8,7 +8,7 @@ export default async function handler(req, res) {
   if (!storeId) return res.status(400).json({ error: 'missing storeId' });
 
   if (req.method === 'GET') {
-    const { data } = await sb().from('orders').select('*').eq('store_id', storeId).eq('finalized', false).order('created_at', { ascending: false });
+    const { data } = await sb().from('orders').select('*').eq('store_id', storeId).or('finalized.eq.false,finalized.is.null').order('created_at', { ascending: false });
     return res.status(200).json({ orders: data || [] });
   }
 

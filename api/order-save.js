@@ -23,6 +23,9 @@ export default async function handler(req, res) {
   if (!total) return res.status(400).json({ error: 'missing total' });
 
   const isDeliveryPay = deliveryPayment === true || ['card_delivery', 'pix_delivery', 'cash'].includes(paymentMethod);
+  const resolvedStatus = status || (isDeliveryPay ? 'pending' : 'paid');
+  // Online orders confirmed (status=paid) go straight to 'preparing'; delivery orders go to 'pending'
+  const kanbanStatus = (resolvedStatus === 'paid' && !isDeliveryPay) ? 'preparing' : 'pending';
   const order = {
     id: pixId || `ord-${Date.now()}`,
     store_id: storeId || null,
@@ -31,10 +34,11 @@ export default async function handler(req, res) {
     total,
     customer: customer || {},
     address: address || '',
-    status: status || (isDeliveryPay ? 'pending' : 'paid'),
+    status: resolvedStatus,
     payment_method: paymentMethod || 'pix_online',
     delivery_payment: isDeliveryPay,
-    kanban_status: 'pending',
+    kanban_status: kanbanStatus,
+    finalized: false,
     change_for: changeFor || null,
     change_note: changeNote || null,
     created_at: new Date().toISOString(),
