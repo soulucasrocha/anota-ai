@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
+import { printOrder as thermalPrintOrder } from '../../utils/thermalPrint';
 
 function fmtMoney(cents) { return 'R$ ' + (cents / 100).toFixed(2).replace('.', ','); }
 function fmtTime(iso) {
@@ -25,28 +26,7 @@ const PM_LABEL = {
 };
 
 function printOrder(order) {
-  const fmtPrice = (c) => 'R$ ' + (c / 100).toFixed(2).replace('.', ',');
-  const now = new Date().toLocaleString('pt-BR');
-  const pm = { pix_online:'PIX Online', card_online:'Cartão Online', card_delivery:'Cartão na Entrega', pix_delivery:'PIX na Entrega', cash:'Dinheiro' };
-  const lines = [
-    `<center><b>PEDIDO #${String(order.id).slice(-6)}</b></center>`,
-    `<center>${now}</center>`,
-    `<hr/>`,
-    `<b>Cliente:</b> ${order.customer?.name || '—'}<br/>`,
-    order.customer?.phone ? `<b>Tel:</b> ${order.customer.phone}<br/>` : '',
-    order.address ? `<b>End.:</b> ${order.address}<br/>` : '',
-    `<hr/>`,
-    ...(order.items || []).map(i => `${i.qty || 1}x ${i.name} &nbsp; ${fmtPrice((i.price || 0) * (i.qty || 1))}<br/>`),
-    `<hr/>`,
-    `<b>TOTAL: ${fmtPrice(order.total || 0)}</b><br/>`,
-    (order.payment_method || order.paymentMethod) ? `Pgto: ${pm[order.payment_method || order.paymentMethod] || '—'}<br/>` : '',
-  ].join('');
-  const w = window.open('', '_blank', 'width=400,height=600');
-  w.document.write(`<html><head><style>body{font-family:monospace;font-size:14px;width:300px;padding:8px}hr{border:1px dashed #000}</style></head><body>${lines}<br/><br/></body></html>`);
-  w.document.close();
-  w.focus();
-  w.print();
-  w.close();
+  thermalPrintOrder(order);
 }
 
 function OrderCard({ order, token, storeId, onMoved, onFinalized, col, autoPrint }) {
