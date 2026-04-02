@@ -41,7 +41,7 @@ async function sendCapiPurchase(value, orderId) {
 async function saveOrderToDashboard({ pixId, cart, amount, customer, address, storeId }) {
   try {
     const items = Object.values(cart || {}).map(({ item, qty }) => ({
-      id: item.id, name: item.name, qty, price: item.price,
+      id: item.id, name: item.name, qty, price: item.price, note: item.cartNote || '',
     }));
     await fetch('/api/order-save', {
       method: 'POST',
@@ -239,7 +239,7 @@ export default function PixScreen({ active, amount, cart, customer, deliveryAddr
       });
       // Salva transação para aparecer no painel de Transações
       const cust = customerRef.current;
-      const items = Object.values(cart || {}).map(({ item, qty }) => ({ id: item.id, name: item.name, qty, price: item.price }));
+      const items = Object.values(cart || {}).map(({ item, qty }) => ({ id: item.id, name: item.name, qty, price: item.price, note: item.cartNote || '' }));
       fetch('/api/order-save?type=transaction', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },

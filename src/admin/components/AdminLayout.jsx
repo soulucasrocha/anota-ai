@@ -2,7 +2,7 @@ import { useState } from 'react';
 
 const NAV = [
   { key: 'dashboard',    icon: '📊', label: 'Dashboard'           },
-  { key: 'products',     icon: '🍕', label: 'Produtos'             },
+  { key: 'products',     icon: '🍕', label: 'Cardápio'             },
   { key: 'orders',       icon: '🧾', label: 'Pedidos (Kanban)'     },
   { key: 'transactions', icon: '💳', label: 'Transações'           },
   { key: 'payments',     icon: '💲', label: 'Formas de Pagamento'  },
@@ -18,7 +18,7 @@ export default function AdminLayout({ page, setPage, onLogout, children, stores,
   const [newSlug, setNewSlug] = useState('');
 
   const titles = {
-    dashboard: 'Dashboard', products: 'Gestão de Produtos',
+    dashboard: 'Dashboard', products: 'Cardápio',
     orders: 'Pedidos (Kanban)', transactions: 'Transações PIX',
     payments: 'Formas de Pagamento', profile: 'Perfil da Loja',
     tracking: 'Rastreamento', delivery: 'Área de Entrega', printer: 'Impressora',

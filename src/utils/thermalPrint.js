@@ -119,7 +119,8 @@ export async function getQZPrinters() {
   }
 }
 
-function buildPrintHTML(order, paperWidth = 300) {
+function buildPrintHTML(order, paperWidth = 300, fontSize = 'normal') {
+  const fontPx = { small: 10, normal: 13, large: 16, xlarge: 20 }[fontSize] || 13;
   const fmtPrice = (c) => 'R$ ' + (c / 100).toFixed(2).replace('.', ',');
   const now = new Date().toLocaleString('pt-BR');
   const pm = {
@@ -135,7 +136,10 @@ function buildPrintHTML(order, paperWidth = 300) {
     order.address ? `<b>End.:</b> ${order.address}<br/>` : '',
     order.change_note ? `<b>${order.change_note}</b><br/>` : '',
     `<hr/>`,
-    ...(order.items || []).map(i => `${i.qty || 1}x ${i.name} &nbsp; ${fmtPrice((i.price || 0) * (i.qty || 1))}<br/>`),
+    ...(order.items || []).flatMap(i => [
+      `${i.qty || 1}x ${i.name} &nbsp; ${fmtPrice((i.price || 0) * (i.qty || 1))}<br/>`,
+      i.note ? `&nbsp;&nbsp;<i>${i.note}</i><br/>` : '',
+    ]),
     `<hr/>`,
     `<b>TOTAL: ${fmtPrice(order.total || 0)}</b><br/>`,
     `Pgto: ${pm[order.payment_method || order.paymentMethod] || '—'}<br/>`,
@@ -143,14 +147,14 @@ function buildPrintHTML(order, paperWidth = 300) {
   ].join('');
 
   return `<html><head><style>
-    body { font-family: monospace; font-size: 13px; width: ${paperWidth}px; padding: 6px; margin: 0; }
+    body { font-family: monospace; font-size: ${fontPx}px; width: ${paperWidth}px; padding: 6px; margin: 0; }
     hr { border: 1px dashed #000; margin: 4px 0; }
     center { text-align: center; }
     b { font-weight: bold; }
   </style></head><body>${lines}</body></html>`;
 }
 
-function buildEscPos(order) {
+function buildEscPos(order, fontSize = 'normal') {
   const ESC = '\x1B', GS = '\x1D', LF = '\n';
   const SEP = '--------------------------------' + LF;
   const fmtPrice = (c) => 'R$ ' + (c / 100).toFixed(2).replace('.', ',');
@@ -161,6 +165,18 @@ function buildEscPos(order) {
   const add = (s) => lines.push({ type: 'raw', format: 'plain', data: s });
 
   add(ESC + '@');                        // init
+
+  // Font size via ESC/POS commands
+  if (fontSize === 'small') {
+    add(ESC + 'M\x01');                  // Font B (condensed/smaller)
+  } else if (fontSize === 'large') {
+    add(GS + '!\x11');                   // 2x width + 2x height
+  } else if (fontSize === 'xlarge') {
+    add(GS + '!\x22');                   // 3x width + 3x height
+  } else {
+    add(ESC + 'M\x00');                  // Font A normal (default)
+  }
+
   add(ESC + 'a\x01');                    // center
   add(ESC + 'E\x01');                    // bold on
   add(`PEDIDO #${String(order.id).slice(-6)}` + LF);
@@ -177,6 +193,7 @@ function buildEscPos(order) {
     const name  = (i.name || '').slice(0, 22).padEnd(22);
     const price = fmtPrice((i.price || 0) * (i.qty || 1)).padStart(10);
     add(`${i.qty || 1}x ${name}${price}` + LF);
+    if (i.note) add(`   ${i.note}` + LF);
   });
   add(SEP);
   add(ESC + 'E\x01');
@@ -196,13 +213,14 @@ function buildEscPos(order) {
  */
 export async function printOrder(order) {
   const paperWidth  = Number(localStorage.getItem('print_paper_width') || 300);
+  const fontSize    = localStorage.getItem('print_font_size') || 'normal';
   const printerName = localStorage.getItem('active_printer') || '';
 
   const connected = await connectQZ();
   if (connected) {
     try {
       const cfg = window.qz.configs.create(printerName || null);
-      await window.qz.print(cfg, buildEscPos(order));
+      await window.qz.print(cfg, buildEscPos(order, fontSize));
       return 'qz';
     } catch (e) {
       console.warn('QZ Tray ESC/POS failed, trying HTML:', e);
@@ -211,7 +229,7 @@ export async function printOrder(order) {
         const cfg2 = window.qz.configs.create(printerName || null);
         await window.qz.print(cfg2, [{
           type: 'pixel', format: 'html', flavor: 'plain',
-          data: buildPrintHTML(order, paperWidth),
+          data: buildPrintHTML(order, paperWidth, fontSize),
           options: { pageWidth: paperWidth === 200 ? 2.28 : 3.15, pageHeight: 0 },
         }]);
         return 'qz';
@@ -222,7 +240,7 @@ export async function printOrder(order) {
   }
 
   // Fallback: browser print dialog
-  const html = buildPrintHTML(order, paperWidth);
+  const html = buildPrintHTML(order, paperWidth, fontSize);
   const w = window.open('', '_blank', `width=${paperWidth + 60},height=500`);
   if (!w) return 'error';
   w.document.write(html);

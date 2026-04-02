@@ -1,6 +1,7 @@
 import { sb, getStoreBySlug } from './_supabase.js';
 
-const ORDER = ['destaques','combos','minicombos','trio','salgadas','metade','dividas','doces','bebidas','adicionais'];
+// Fallback order when no categories configured in store_settings
+const DEFAULT_ORDER = ['destaques','combos','minicombos','trio','salgadas','metade','dividas','doces','bebidas','adicionais'];
 
 export default async function handler(req, res) {
   if (req.method !== 'GET') return res.status(405).end();
@@ -16,43 +17,57 @@ export default async function handler(req, res) {
       storeId = store?.id;
     }
     if (!storeId) {
-      // fallback: first active store
       const { data } = await sb().from('stores').select('id').eq('active', true).limit(1).maybeSingle();
       storeId = data?.id;
     }
     if (!storeId) return res.status(200).json({ source: 'static', paymentMethods: { pix_online: true } });
 
-    // Get store info + payment methods + delivery in parallel
-    const [{ data: storeInfo }, { data: settings }] = await Promise.all([
+    // Get store info + settings + products in parallel
+    const [{ data: storeInfo }, { data: settings }, { data: products }] = await Promise.all([
       sb().from('stores').select('name, logo_url, whatsapp, hours').eq('id', storeId).maybeSingle(),
-      sb().from('store_settings').select('payment_methods, delivery').eq('store_id', storeId).maybeSingle(),
+      sb().from('store_settings').select('payment_methods, delivery, categories').eq('store_id', storeId).maybeSingle(),
+      sb().from('products').select('id,category,name,description,price,old_price,tag,img,active,sold_out,steps,subproducts,subproduct_limit,sort_order').eq('store_id', storeId).eq('active', true).order('sort_order').order('name'),
     ]);
+
     const paymentMethods = settings?.payment_methods || { pix_online: true, card_online: false, card_delivery: false, pix_delivery: false, cash: false };
     const defaultPayment = settings?.payment_methods?._default || null;
     const delivery = settings?.delivery || {};
     const minOrder = delivery?.min_order || 0;
 
-    // Get products (only active ones)
-    const { data: products } = await sb().from('products').select('id,category,name,description,price,old_price,tag,img,active,sold_out,steps').eq('store_id', storeId).eq('active', true);
+    // Determine category order: from store_settings if available, else fallback
+    const savedCats = (settings?.categories || []).sort((a, b) => (a.sort_order || 0) - (b.sort_order || 0));
+    const ORDER = savedCats.length > 0
+      ? savedCats.map(c => c.id)
+      : DEFAULT_ORDER;
+
+    // Build categories list for the frontend nav
+    const categoriesList = savedCats.length > 0
+      ? savedCats.map(c => ({ id: c.id, label: c.name, description: c.description || '' }))
+      : DEFAULT_ORDER.map(id => ({ id, label: id.charAt(0).toUpperCase() + id.slice(1), description: '' }));
 
     const storeMeta = {
-      storeName: storeInfo?.name || '',
+      storeName:    storeInfo?.name || '',
       storeLogoUrl: storeInfo?.logo_url || '',
       storeWhatsapp: storeInfo?.whatsapp || '',
-      storeHours: storeInfo?.hours || [],
+      storeHours:   storeInfo?.hours || [],
       defaultPayment,
       minOrder,
+      categories: categoriesList,
     };
 
     if (!products || !products.length) {
       return res.status(200).json({ source: 'static', paymentMethods, storeId, ...storeMeta });
     }
 
+    // Build menu keyed by category, in ORDER
     const menu = {};
     ORDER.forEach(cat => { menu[cat] = []; });
     products.forEach(p => {
       if (menu[p.category] !== undefined) {
         menu[p.category].push({ ...p, desc: p.description });
+      } else {
+        // Product with unrecognized category: add dynamically
+        menu[p.category] = [{ ...p, desc: p.description }];
       }
     });
 

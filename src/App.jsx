@@ -112,6 +112,9 @@ export default function App() {
   const [deliveryChangeFor, setDeliveryChangeFor] = useState(() => _s?.deliveryChangeFor || null);
   const [storeHours, setStoreHours]             = useState([]);
   const [minOrder, setMinOrder]                 = useState(0);
+  const [menuCategories, setMenuCategories]     = useState([]);
+  const [paymentMethods, setPaymentMethods]     = useState(null);
+  const [defaultPayment, setDefaultPayment]     = useState(null);
 
   // Wrapper de setScreen que salva na sessão
   const setScreen = useCallback((s) => {
@@ -137,6 +140,9 @@ export default function App() {
         if (d.storeWhatsapp) setStoreWhatsapp(d.storeWhatsapp);
         if (d.storeHours) setStoreHours(d.storeHours);
         if (d.minOrder != null) setMinOrder(d.minOrder);
+        if (d.categories && d.categories.length > 0) setMenuCategories(d.categories);
+        if (d.paymentMethods) setPaymentMethods(d.paymentMethods);
+        if (d.defaultPayment) setDefaultPayment(d.defaultPayment);
       })
       .catch(() => {}); // silently fall back to static menu
   }, [slug]);
@@ -266,7 +272,7 @@ export default function App() {
   // ── Delivery order handler ─────────────────────────────────────────────────
 
   const handleDeliveryOrder = useCallback(async (method, changeFor) => {
-    const items = Object.values(cart).map(({ item, qty }) => ({ id: item.id, name: item.name, qty, price: item.price }));
+    const items = Object.values(cart).map(({ item, qty }) => ({ id: item.id, name: item.name, qty, price: item.price, note: item.cartNote || '' }));
     const orderId = `del-${Date.now()}`;
     const total = getCartTotal();
     // Build change note if cash payment
@@ -323,10 +329,10 @@ export default function App() {
           🔴 Fechado{nextOpen ? ` · Abre às ${nextOpen}` : ''}
         </div>
       )}
-      <StoreInfoBar />
-      <CategoryNav />
+
+      <CategoryNav categories={menuCategories} />
       <DeliveryBanner geoData={geoData} />
-      <MenuMain onItemClick={handleItemClick} menu={dynamicMenu} />
+      <MenuMain onItemClick={handleItemClick} menu={dynamicMenu} categories={menuCategories} />
 
       <CartBar
         cartCount={getCartCount()}
@@ -393,6 +399,8 @@ export default function App() {
         }}
         geoData={geoData}
         slug={slug}
+        paymentMethodsData={paymentMethods}
+        defaultPaymentData={defaultPayment}
       />
 
       <PixScreen

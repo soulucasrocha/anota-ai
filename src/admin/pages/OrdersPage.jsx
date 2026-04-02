@@ -161,7 +161,7 @@ function OrderCard({ order, token, storeId, onMoved, onFinalized, col, autoPrint
         {(order.items || []).slice(0, 3).map((item, i) => (
           <div key={i} className="kanban-item-row">
             <span className="kanban-item-qty">{item.qty || 1}x</span>
-            <span className="kanban-item-name">{item.name}</span>
+            <span className="kanban-item-name">{item.name}{item.note ? <span style={{display:'block',fontSize:11,color:'#888',fontWeight:400}}>{item.note}</span> : null}</span>
           </div>
         ))}
         {(order.items || []).length > 3 && (

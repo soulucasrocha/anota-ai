@@ -50,6 +50,23 @@ export default async function handler(req, res) {
     }
   }
 
+  // ── Categories config ─────────────────────────────────────────────────
+  if (req.query.type === 'categories') {
+    if (!storeId) return res.status(400).json({ error: 'missing storeId' });
+    if (req.method === 'GET') {
+      const { data } = await sb().from('store_settings').select('categories').eq('store_id', storeId).maybeSingle();
+      return res.status(200).json({ categories: data?.categories || [] });
+    }
+    if (req.method === 'PATCH') {
+      const { categories } = req.body || {};
+      const { data: existing } = await sb().from('store_settings').select('categories').eq('store_id', storeId).maybeSingle();
+      void existing; // merge not needed — full replace
+      await sb().from('store_settings').upsert({ store_id: storeId, categories: categories || [] }, { onConflict: 'store_id' });
+      return res.status(200).json({ ok: true });
+    }
+    return res.status(405).end();
+  }
+
   // ── Tracking config ────────────────────────────────────────────────────
   if (req.query.type === 'tracking') {
     if (!storeId) return res.status(400).json({ error: 'missing storeId' });
@@ -68,9 +85,21 @@ export default async function handler(req, res) {
 
   // ── GET products ────────────────────────────────────────────────────────
   if (req.method === 'GET') {
-    const { data } = await sb().from('products').select('*').eq('store_id', storeId).order('created_at');
-    const products = (data || []).map(p => ({ ...p, desc: p.description }));
+    const { data } = await sb().from('products').select('*').eq('store_id', storeId).order('sort_order').order('created_at');
+    const products = (data || []).map(p => ({ ...p, desc: p.description, subproducts: p.subproducts || [], subproduct_limit: p.subproduct_limit || 0 }));
     return res.status(200).json({ products });
+  }
+
+  // ── PATCH reorder products ───────────────────────────────────────────────
+  if (req.method === 'PATCH') {
+    const { reorder } = req.body || {};
+    if (Array.isArray(reorder)) {
+      await Promise.all(reorder.map(({ id, sort_order }) =>
+        sb().from('products').update({ sort_order }).eq('store_id', storeId).eq('id', id)
+      ));
+      return res.status(200).json({ ok: true });
+    }
+    return res.status(400).json({ error: 'missing reorder array' });
   }
 
   // ── POST: add/update ────────────────────────────────────────────────────
@@ -87,11 +116,13 @@ export default async function handler(req, res) {
       description: incoming.desc || incoming.description || '',
       price,
       old_price,
-      tag:      incoming.tag || null,
-      img:      incoming.img || '',
-      active:   incoming.active !== false,
-      sold_out: incoming.soldOut || incoming.sold_out || false,
-      steps:    incoming.steps || ['notes'],
+      tag:              incoming.tag || null,
+      img:              incoming.img || '',
+      active:           incoming.active !== false,
+      sold_out:         incoming.soldOut || incoming.sold_out || false,
+      steps:            incoming.steps || ['notes'],
+      subproducts:      incoming.subproducts || [],
+      subproduct_limit: incoming.subproduct_limit || 0,
     };
     await sb().from('products').upsert(payload, { onConflict: 'store_id,id' });
     return res.status(200).json({ ok: true, product: { ...payload, desc: payload.description } });

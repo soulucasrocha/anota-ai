@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 
-const CATS = [
+const DEFAULT_CATS = [
   { id: 'destaques',  label: 'Destaques' },
   { id: 'combos',     label: 'Combos' },
   { id: 'minicombos', label: 'Mini Combos' },
@@ -13,8 +13,13 @@ const CATS = [
   { id: 'adicionais', label: 'Adicionais' },
 ];
 
-export default function CategoryNav() {
-  const [active, setActive] = useState('destaques');
+export default function CategoryNav({ categories }) {
+  // Use dynamic categories from API when available, else fall back to defaults
+  const CATS = (categories && categories.length > 0)
+    ? categories.map(c => ({ id: c.id, label: c.label || c.name || c.id }))
+    : DEFAULT_CATS;
+
+  const [active, setActive] = useState(CATS[0]?.id || 'destaques');
   const navRef = useRef(null);
 
   const scrollBtnIntoView = (id) => {
@@ -50,7 +55,7 @@ export default function CategoryNav() {
     });
 
     return () => obs.disconnect();
-  }, []);
+  }, [CATS.map(c => c.id).join(',')]);
 
   return (
     <nav className="cat-nav" ref={navRef}>

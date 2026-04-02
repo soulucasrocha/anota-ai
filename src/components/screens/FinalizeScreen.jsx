@@ -19,39 +19,51 @@ const PM_INFO = {
   cash:          { icon: '💵', label: 'Dinheiro',         desc: 'Dinheiro ao receber',   online: false },
 };
 
-export default function FinalizeScreen({ active, address, onAddressChange, getCartTotal, onBack, onAdvance, geoData, slug }) {
+export default function FinalizeScreen({ active, address, onAddressChange, getCartTotal, onBack, onAdvance, geoData, slug, paymentMethodsData, defaultPaymentData }) {
   const total      = getCartTotal();
   const hasAddress = address.trim().length > 0;
 
   const [suggestions, setSuggestions] = useState([]);
   const [showSugg,    setShowSugg]    = useState(false);
   const [searching,   setSearching]   = useState(false);
-  const [payMethods,  setPayMethods]  = useState({ pix_online: true });
-  const [selectedPay, setSelectedPay] = useState('pix_online');
+  const [payMethods,  setPayMethods]  = useState({});
+  const [selectedPay, setSelectedPay] = useState(null);
   const [changeFor,   setChangeFor]   = useState('');
   const debouncedAddress = useDebounce(address, 500);
   const inputRef = useRef(null);
 
-  // Fetch payment methods + default
+  // Apply payment methods from App.jsx props (already fetched on load)
   useEffect(() => {
-    if (!active) return;
+    if (!paymentMethodsData) return;
+    setPayMethods(paymentMethodsData);
+    const def = defaultPaymentData;
+    if (def && paymentMethodsData[def]) {
+      setSelectedPay(def);
+    } else {
+      const first = Object.keys(PM_INFO).find(k => paymentMethodsData[k]);
+      setSelectedPay(first || null);
+    }
+  }, [paymentMethodsData, defaultPaymentData]);
+
+  // Fallback fetch if props not available (e.g. direct URL access)
+  useEffect(() => {
+    if (!active || paymentMethodsData) return;
     fetch(`/api/menu-public${slug ? `?slug=${slug}` : ''}`)
       .then(r => r.json())
       .then(d => {
         if (d.paymentMethods) {
           setPayMethods(d.paymentMethods);
-          // Use defaultPayment if set and enabled, otherwise first enabled
           const def = d.defaultPayment;
           if (def && d.paymentMethods[def]) {
             setSelectedPay(def);
           } else {
             const first = Object.keys(PM_INFO).find(k => d.paymentMethods[k]);
-            if (first) setSelectedPay(first);
+            setSelectedPay(first || null);
           }
         }
       })
       .catch(() => {});
-  }, [active, slug]);
+  }, [active, slug, paymentMethodsData]);
 
   // Autocomplete
   useEffect(() => {
@@ -81,7 +93,7 @@ export default function FinalizeScreen({ active, address, onAddressChange, getCa
   }, [onAddressChange]);
 
   const hasEnabledPay = Object.keys(PM_INFO).some(k => payMethods[k]);
-  const isPayDisabled = !payMethods[selectedPay];
+  const isPayDisabled = !selectedPay || !payMethods[selectedPay];
 
   const btnLabel = () => {
     if (!hasAddress) return 'Informe o endereço';
@@ -142,24 +154,22 @@ export default function FinalizeScreen({ active, address, onAddressChange, getCa
         {/* Forma de pagamento */}
         <div className="finalize-section">
           <h4 className="finalize-section-title">Forma de pagamento</h4>
-          {Object.keys(PM_INFO).map(key => {
+          {Object.keys(PM_INFO).filter(key => !!payMethods[key]).map(key => {
             const info = PM_INFO[key];
             const sel = selectedPay === key;
-            const enabled = !!payMethods[key];
             return (
               <div
                 key={key}
-                className={'pay-option' + (sel ? ' selected' : '') + (!enabled ? ' disabled' : '')}
-                onClick={() => enabled && setSelectedPay(key)}
-                style={{ cursor: enabled ? 'pointer' : 'not-allowed' }}
+                className={'pay-option' + (sel ? ' selected' : '')}
+                onClick={() => setSelectedPay(key)}
+                style={{ cursor: 'pointer' }}
               >
-                <div className="pay-option-icon" style={!enabled ? { opacity: 0.4 } : {}}>{info.icon}</div>
+                <div className="pay-option-icon">{info.icon}</div>
                 <div className="pay-option-info">
-                  <span className="pay-option-name" style={!enabled ? { color: '#aaa' } : {}}>{info.label}</span>
-                  <span className="pay-option-desc" style={!enabled ? { color: '#ccc' } : {}}>{info.desc}</span>
+                  <span className="pay-option-name">{info.label}</span>
+                  <span className="pay-option-desc">{info.desc}</span>
                 </div>
-                {!enabled && <span className="pay-badge disabled-badge">Desativado</span>}
-                {enabled && sel && <span className="pay-badge">Selecionado</span>}
+                {sel && <span className="pay-badge">Selecionado</span>}
               </div>
             );
           })}

@@ -6,6 +6,13 @@ const PAPER_WIDTHS = [
   { label: '80mm (padrão)', value: 300 },
 ];
 
+const FONT_SIZES = [
+  { label: 'Pequena',      value: 'small'  },
+  { label: 'Normal',       value: 'normal' },
+  { label: 'Grande',       value: 'large'  },
+  { label: 'Extra Grande', value: 'xlarge' },
+];
+
 const MOCK_ORDER = {
   id: 'test-000001',
   customer: { name: 'Cliente Teste', phone: '(11) 99999-9999' },
@@ -18,6 +25,7 @@ const MOCK_ORDER = {
 
 export default function PrinterPage({ store }) {
   const [paperWidth,     setPaperWidth]     = useState(() => Number(localStorage.getItem('print_paper_width') || 300));
+  const [fontSize,       setFontSize]       = useState(() => localStorage.getItem('print_font_size') || 'normal');
   const [printers,       setPrinters]       = useState(() => { try { return JSON.parse(localStorage.getItem('saved_printers') || '[]'); } catch { return []; } });
   const [activePrinter,  setActivePrinter]  = useState(() => localStorage.getItem('active_printer') || '');
   const [newPrinterName, setNewPrinterName] = useState('');
@@ -67,6 +75,11 @@ export default function PrinterPage({ store }) {
   function savePaperWidth(w) {
     setPaperWidth(w);
     localStorage.setItem('print_paper_width', String(w));
+  }
+
+  function saveFontSize(s) {
+    setFontSize(s);
+    localStorage.setItem('print_font_size', s);
   }
 
   function addPrinter() {
@@ -220,6 +233,39 @@ export default function PrinterPage({ store }) {
           {PAPER_WIDTHS.map(p => (
             <button key={p.value} className={`adm-btn${paperWidth === p.value ? ' primary' : ' ghost'}`} onClick={() => savePaperWidth(p.value)}>{p.label}</button>
           ))}
+        </div>
+      </div>
+
+      {/* Tamanho da fonte */}
+      <div className="adm-card">
+        <div className="adm-card-header"><h3>🔤 Tamanho da Fonte</h3></div>
+        <div className="adm-card-body" style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+          <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+            {FONT_SIZES.map(f => (
+              <button
+                key={f.value}
+                className={`adm-btn${fontSize === f.value ? ' primary' : ' ghost'}`}
+                onClick={() => saveFontSize(f.value)}
+              >
+                {f.label}
+              </button>
+            ))}
+          </div>
+          {/* Preview */}
+          <div style={{ background: '#f9fafb', border: '1px solid #e5e7eb', borderRadius: 8, padding: 14, fontFamily: 'monospace' }}>
+            <p style={{ margin: '0 0 4px', fontSize: 11, color: '#9ca3af' }}>Prévia da impressão:</p>
+            <div style={{
+              fontSize: { small: 10, normal: 13, large: 16, xlarge: 20 }[fontSize],
+              lineHeight: 1.5,
+            }}>
+              <div style={{ textAlign: 'center', fontWeight: 700 }}>PEDIDO #000001</div>
+              <div>Cliente: João Silva</div>
+              <div>End.: Rua Exemplo, 123</div>
+              <div style={{ borderTop: '1px dashed #000', margin: '4px 0' }} />
+              <div>1x Pizza Calabresa       R$ 24,99</div>
+              <div style={{ fontWeight: 700 }}>TOTAL: R$ 24,99</div>
+            </div>
+          </div>
         </div>
       </div>
 

@@ -123,6 +123,62 @@ function HalvesStep({ step, selected, onToggle, bodyRef, isLast }) {
   );
 }
 
+function GroupStep({ group, qtys, onInc, onDec, bodyRef, isLast }) {
+  const required = group.required || 0;
+  const total = Object.values(qtys).reduce((s, q) => s + q, 0);
+  const atLimit = required > 0 && total >= required;
+  const wrapRef = useRef(null);
+
+  const scrollToNext = () => {
+    if (isLast || !wrapRef.current || !bodyRef.current) return;
+    const next = wrapRef.current.nextElementSibling;
+    if (!next) return;
+    setTimeout(() => {
+      const body = bodyRef.current;
+      const bodyRect = body.getBoundingClientRect();
+      const nextRect = next.getBoundingClientRect();
+      const target = body.scrollTop + (nextRect.top - bodyRect.top) - 8;
+      body.scrollTo({ top: Math.max(0, target), behavior: 'smooth' });
+    }, 200);
+  };
+
+  const handleInc = (optId) => {
+    if (atLimit) return;
+    onInc(optId);
+    if (required > 0 && total + 1 === required) scrollToNext();
+  };
+
+  return (
+    <div className="pm-step" ref={wrapRef}>
+      <div className="pm-step-header">
+        <div>
+          <div className="pm-step-title">{group.title || 'Opções'}</div>
+          <div className="pm-step-subtitle">{group.subtitle || (required > 0 ? `Escolha ${required}` : 'Escolha quantas quiser')}</div>
+        </div>
+        <span className={required ? 'pm-required-badge' : 'pm-optional-badge'}>
+          {required ? 'Obrigatório' : 'Opcional'}
+        </span>
+      </div>
+      {(group.options || []).map(opt => (
+        <div key={opt.id} className="pm-option">
+          <div className="pm-option-img">
+            {opt.img ? <img src={opt.img} alt="" loading="lazy" /> : <span style={{fontSize:20}}>📦</span>}
+          </div>
+          <div className="pm-option-info">
+            <div className="pm-option-name">{opt.name}</div>
+            {(opt.description || opt.desc) && <div className="pm-option-desc">{opt.description || opt.desc}</div>}
+          </div>
+          <div className="pm-option-controls">
+            <button className="pm-qty-btn" disabled={(qtys[opt.id] || 0) === 0} onClick={() => onDec(opt.id)}>−</button>
+            <span className="pm-qty-num">{qtys[opt.id] || 0}</span>
+            <button className="pm-qty-btn" disabled={atLimit} onClick={() => handleInc(opt.id)}>+</button>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 function NotesStep({ value, onChange }) {
   return (
     <div className="pm-step">
@@ -151,6 +207,8 @@ export default function ProductModal({ item, onClose, onAddToCart, onInc, onDec,
   const [notes, setNotes]           = useState('');
   const [footerState, setFooterState] = useState('selecting');
   const [addedQty, setAddedQty]     = useState(1);
+  // groupQtys: { [groupId]: { [optionId]: qty } }
+  const [groupQtys, setGroupQtys] = useState({});
   const bodyRef = useRef(null);
 
   const open = !!item;
@@ -167,6 +225,7 @@ export default function ProductModal({ item, onClose, onAddToCart, onInc, onDec,
       setNotes('');
       setFooterState('selecting');
       setAddedQty(1);
+      setGroupQtys({});
     }
   }, [item]);
 
@@ -197,14 +256,33 @@ export default function ProductModal({ item, onClose, onAddToCart, onInc, onDec,
     });
   };
 
-  const checkValid = () => steps.every((step, idx) => {
-    if (step.type === 'flavors' || step.type === 'beverage') {
-      if (!step.required) return true;
-      return Object.values(qtys[idx] || {}).reduce((s, q) => s + q, 0) >= step.required;
-    }
-    if (step.type === 'pizza-halves') return halves.size >= (step.min || 1);
-    return true;
-  });
+  // Normalize subproducts: support both grouped format ({ __type: 'group' }) and legacy flat format
+  const groups = (() => {
+    const raw = item?.subproducts || [];
+    if (!raw.length) return [];
+    if (raw[0]?.__type === 'group') return raw;
+    // Legacy flat format: wrap into a single group
+    return [{ id: '__flat__', __type: 'group', title: 'Opções', subtitle: item.subproduct_limit > 0 ? `Escolha até ${item.subproduct_limit}` : 'Escolha quantas quiser', required: item.subproduct_limit || 0, options: raw }];
+  })();
+
+  const checkValid = () => {
+    // Validate static steps
+    const stepsValid = steps.every((step, idx) => {
+      if (step.type === 'flavors' || step.type === 'beverage') {
+        if (!step.required) return true;
+        return Object.values(qtys[idx] || {}).reduce((s, q) => s + q, 0) >= step.required;
+      }
+      if (step.type === 'pizza-halves') return halves.size >= (step.min || 1);
+      return true;
+    });
+    // Validate required groups
+    const groupsValid = groups.every(g => {
+      if (!g.required) return true;
+      const total = Object.values(groupQtys[g.id] || {}).reduce((s, q) => s + q, 0);
+      return total >= g.required;
+    });
+    return stepsValid && groupsValid;
+  };
 
   const getPrice = () => {
     if (halvesStep && halves.size > 0) {
@@ -229,6 +307,14 @@ export default function ProductModal({ item, onClose, onAddToCart, onInc, onDec,
         const chosen = step.options.filter(o => halves.has(o.id)).map(o => o.name);
         if (chosen.length) parts.push(chosen.join(' + '));
       }
+    });
+    // Groups (dynamic steps)
+    groups.forEach(g => {
+      const gQtys = groupQtys[g.id] || {};
+      const chosen = (g.options || [])
+        .filter(opt => (gQtys[opt.id] || 0) > 0)
+        .map(opt => gQtys[opt.id] > 1 ? `${gQtys[opt.id]}x ${opt.name}` : opt.name);
+      if (chosen.length) parts.push(chosen.join(', '));
     });
     if (notes.trim()) parts.push(`Obs: ${notes.trim()}`);
     return parts.join(' | ');
@@ -280,6 +366,18 @@ export default function ProductModal({ item, onClose, onAddToCart, onInc, onDec,
         </div>
 
         <div className="pm-body" ref={bodyRef}>
+          {/* Dynamic groups (configured per product) */}
+          {groups.map((g, gi) => (
+            <GroupStep
+              key={g.id}
+              group={g}
+              qtys={groupQtys[g.id] || {}}
+              onInc={optId => setGroupQtys(prev => ({ ...prev, [g.id]: { ...(prev[g.id] || {}), [optId]: ((prev[g.id] || {})[optId] || 0) + 1 } }))}
+              onDec={optId => setGroupQtys(prev => ({ ...prev, [g.id]: { ...(prev[g.id] || {}), [optId]: Math.max(0, ((prev[g.id] || {})[optId] || 0) - 1) } }))}
+              bodyRef={bodyRef}
+              isLast={gi === groups.length - 1 && steps.every(s => s.type === 'notes')}
+            />
+          ))}
           {steps.map((step, idx) => {
             const isLast = idx === steps.length - 1;
             if (step.type === 'flavors' || step.type === 'beverage') {

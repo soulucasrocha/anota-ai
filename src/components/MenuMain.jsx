@@ -65,38 +65,77 @@ function CollapsibleSection({ id, title, items, onItemClick }) {
   );
 }
 
-export default function MenuMain({ onItemClick, menu: propMenu }) {
+// Category id → display title mapping (fallback for static/hardcoded categories)
+const CAT_TITLE = {
+  destaques:  'Destaques',
+  combos:     'Combos',
+  minicombos: 'Mini Combos',
+  trio:       'Trio Pizza',
+  salgadas:   'Apenas Pizzas Variadas 35cm',
+  metade:     'Pizza Metade 35cm',
+  dividas:    'Pizzas Dividas 35cm',
+  doces:      'Pizzas Doces',
+  bebidas:    'Refrigerantes',
+  adicionais: 'Adicionais',
+};
+
+export default function MenuMain({ onItemClick, menu: propMenu, categories }) {
   const M = propMenu || STATIC_MENU;
+
+  // Determine render order: use categories from API if provided, else Object.keys(M)
+  const catOrder = (categories && categories.length > 0)
+    ? categories.map(c => c.id)
+    : Object.keys(M);
+
   return (
     <main className="menu-main">
-      {M.destaques?.length > 0 && (
-        <section className="menu-section" id="sec-destaques">
-          <h2 className="section-title">Destaques</h2>
-          <div className="featured-row">
-            {M.destaques.map(item => (
-              <FeatCard key={item.id} item={item} onClick={onItemClick} />
-            ))}
-          </div>
-        </section>
-      )}
+      {catOrder.map(catId => {
+        const items = M[catId];
+        if (!items || items.length === 0) return null;
 
-      {M.combos?.length > 0 && (
-        <section className="menu-section" id="sec-combos">
-          <h2 className="section-title">Combos</h2>
-          <div className="product-list">
-            {M.combos.map(item => <ProdItem key={item.id} item={item} onClick={onItemClick} />)}
-          </div>
-        </section>
-      )}
+        // "destaques" renders as horizontal featured cards
+        if (catId === 'destaques') {
+          return (
+            <section key={catId} className="menu-section" id="sec-destaques">
+              <h2 className="section-title">Destaques</h2>
+              <div className="featured-row">
+                {items.map(item => (
+                  <FeatCard key={item.id} item={item} onClick={onItemClick} />
+                ))}
+              </div>
+            </section>
+          );
+        }
 
-      {M.minicombos?.length > 0  && <CollapsibleSection id="minicombos" title="Mini Combos"                 items={M.minicombos}  onItemClick={onItemClick} />}
-      {M.trio?.length > 0        && <CollapsibleSection id="trio"       title="Trio Pizza"                  items={M.trio}        onItemClick={onItemClick} />}
-      {M.salgadas?.length > 0    && <CollapsibleSection id="salgadas"   title="Apenas Pizzas Variadas 35cm" items={M.salgadas}    onItemClick={onItemClick} />}
-      {M.metade?.length > 0      && <CollapsibleSection id="metade"     title="Pizza Metade 35cm"           items={M.metade}      onItemClick={onItemClick} />}
-      {M.dividas?.length > 0     && <CollapsibleSection id="dividas"    title="Pizzas Dividas 35cm"         items={M.dividas}     onItemClick={onItemClick} />}
-      {M.doces?.length > 0       && <CollapsibleSection id="doces"      title="Pizzas Doces"                items={M.doces}       onItemClick={onItemClick} />}
-      {M.bebidas?.length > 0     && <CollapsibleSection id="bebidas"    title="Refrigerantes"               items={M.bebidas}     onItemClick={onItemClick} />}
-      {M.adicionais?.length > 0  && <CollapsibleSection id="adicionais" title="Adicionais"                  items={M.adicionais}  onItemClick={onItemClick} />}
+        // "combos" renders as a flat list (no collapsible)
+        if (catId === 'combos') {
+          return (
+            <section key={catId} className="menu-section" id="sec-combos">
+              <h2 className="section-title">
+                {categories?.find(c => c.id === catId)?.label || CAT_TITLE[catId] || catId}
+              </h2>
+              <div className="product-list">
+                {items.map(item => <ProdItem key={item.id} item={item} onClick={onItemClick} />)}
+              </div>
+            </section>
+          );
+        }
+
+        // All other categories as collapsible sections
+        const title = categories?.find(c => c.id === catId)?.label
+          || CAT_TITLE[catId]
+          || catId;
+
+        return (
+          <CollapsibleSection
+            key={catId}
+            id={catId}
+            title={title}
+            items={items}
+            onItemClick={onItemClick}
+          />
+        );
+      })}
 
       <div className="menu-footer">
         <p>🍕 Cardápio Digital • Superp Delivery</p>

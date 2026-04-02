@@ -27,7 +27,7 @@ html, body {
 }
 
 body {
-  padding-top: calc(var(--hdr-h) + var(--info-h) + var(--cat-h));
+  padding-top: calc(var(--hdr-h) + var(--cat-h));
   padding-bottom: var(--bnav-h);
 }
 
@@ -99,7 +99,7 @@ body {
 /* ─── Category nav ───────────────────────────────────────────────────────── */
 .cat-nav {
   position: fixed;
-  top: calc(var(--hdr-h) + var(--info-h));
+  top: var(--hdr-h);
   left: 0; right: 0;
   background: var(--white);
   border-bottom: 1px solid var(--border);
