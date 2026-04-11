@@ -127,7 +127,6 @@ export default function FinalizeScreen({
   const hasAddress    = address.trim().length > 0;
   const hasEnabledPay = Object.keys(PM_INFO).some(k => payMethods[k]);
   const isPayDisabled = !selectedPay || !payMethods[selectedPay];
-  const isBlocked     = zonesConfigured && outsideArea;
 
   const deliveryFee = matchedZone?.fee || 0;
   const total       = getCartTotal();
@@ -135,8 +134,6 @@ export default function FinalizeScreen({
 
   const btnLabel = () => {
     if (!hasAddress) return 'Informe o endereço';
-    if (zoneChecking) return 'Verificando área...';
-    if (isBlocked) return 'Fora da área de entrega';
     if (!hasEnabledPay) return 'Sem forma de pagamento';
     const info = PM_INFO[selectedPay];
     if (info?.online) return `Ir para pagamento • ${fmtPrice(grandTotal)}`;
@@ -201,15 +198,7 @@ export default function FinalizeScreen({
               {zoneChecking ? (
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 14px', background: '#f9fafb', borderRadius: 10, border: '1px solid #e5e7eb' }}>
                   <span style={{ fontSize: 14 }}>🔍</span>
-                  <span style={{ fontSize: 13, color: '#6b7280' }}>Verificando área de entrega...</span>
-                </div>
-              ) : outsideArea ? (
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 14px', background: '#fef2f2', borderRadius: 10, border: '1px solid #fecaca' }}>
-                  <span style={{ fontSize: 16 }}>🚫</span>
-                  <div>
-                    <p style={{ margin: 0, fontSize: 13, fontWeight: 700, color: '#dc2626' }}>Fora da área de entrega</p>
-                    <p style={{ margin: 0, fontSize: 12, color: '#ef4444' }}>Infelizmente não entregamos neste endereço.</p>
-                  </div>
+                  <span style={{ fontSize: 13, color: '#6b7280' }}>Verificando taxa de entrega...</span>
                 </div>
               ) : matchedZone ? (
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 14px', background: '#f0fdf4', borderRadius: 10, border: '1px solid #86efac' }}>
@@ -221,6 +210,14 @@ export default function FinalizeScreen({
                     <p style={{ margin: 0, fontSize: 12, color: '#15803d' }}>
                       Taxa de entrega: <strong>{deliveryFee === 0 ? 'Grátis' : fmtPrice(deliveryFee)}</strong>
                     </p>
+                  </div>
+                </div>
+              ) : outsideArea ? (
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 14px', background: '#fffbeb', borderRadius: 10, border: '1px solid #fcd34d' }}>
+                  <span style={{ fontSize: 16 }}>⚠️</span>
+                  <div>
+                    <p style={{ margin: 0, fontSize: 13, fontWeight: 700, color: '#92400e' }}>Endereço fora da área configurada</p>
+                    <p style={{ margin: 0, fontSize: 12, color: '#b45309' }}>A taxa de entrega será combinada com o entregador.</p>
                   </div>
                 </div>
               ) : null}
@@ -282,8 +279,8 @@ export default function FinalizeScreen({
       <div className="screen-footer">
         <button
           className="screen-advance-btn"
-          disabled={!hasAddress || isPayDisabled || isBlocked || zoneChecking}
-          onClick={() => hasAddress && !isPayDisabled && !isBlocked && !zoneChecking
+          disabled={!hasAddress || isPayDisabled}
+          onClick={() => hasAddress && !isPayDisabled
             && onAdvance(selectedPay, changeFor ? Number(changeFor) : null, addrNumber.trim() || null)}
         >
           {btnLabel()}

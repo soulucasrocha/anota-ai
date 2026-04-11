@@ -89,16 +89,23 @@ export default async function handler(req, res) {
       return res.status(r.status).json(await r.json());
     }
 
-    // GET /api/wa?action=probe — discover backend routes
+    // GET /api/wa?action=probe — check backend deployment status
     if (action === 'probe' && method === 'GET') {
       const results = {};
-      for (const path of ['/', '/api', '/routes', '/health', '/docs', '/whatsapp']) {
-        try {
-          const r = await fetch(backendUrl(path), { headers: hdrs() });
-          let body; try { body = await r.text(); } catch { body = ''; }
-          results[path] = { status: r.status, body: body.slice(0, 300) };
-        } catch(e) { results[path] = { error: e.message }; }
-      }
+      // Check health
+      try {
+        const r = await fetch(backendUrl('/health'), { headers: hdrs() });
+        let body; try { body = await r.text(); } catch { body = ''; }
+        results.health = { status: r.status, body: body.slice(0, 200) };
+      } catch(e) { results.health = { error: e.message }; }
+      // Check if new send-message route exists (POST with empty body → 400 means route exists)
+      try {
+        const r = await fetch(backendUrl(`/whatsapp/${id || 'test'}/send-message`), {
+          method: 'POST', headers: hdrs({ 'Content-Type': 'application/json' }), body: '{}',
+        });
+        let body; try { body = await r.text(); } catch { body = ''; }
+        results.sendRoute = { status: r.status, body: body.slice(0, 200), note: r.status === 400 ? '✅ ROTA EXISTE' : r.status === 404 ? '❌ AINDA NÃO DEPLOYOU' : '?' };
+      } catch(e) { results.sendRoute = { error: e.message }; }
       return res.status(200).json(results);
     }
 
