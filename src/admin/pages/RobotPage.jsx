@@ -9,10 +9,14 @@ const STEPS = [
 const VARS = ['{{nome}}', '{{pedido}}', '{{total}}'];
 
 export default function RobotPage({ token, storeId }) {
-  const [bot,     setBot]     = useState(null);
-  const [accounts, setAccounts] = useState([]);
-  const [saving,  setSaving]  = useState(false);
-  const [saved,   setSaved]   = useState(false);
+  const [bot,       setBot]       = useState(null);
+  const [accounts,  setAccounts]  = useState([]);
+  const [saving,    setSaving]    = useState(false);
+  const [saved,     setSaved]     = useState(false);
+  const [testPhone, setTestPhone] = useState('');
+  const [testStep,  setTestStep]  = useState('preparing');
+  const [testLog,   setTestLog]   = useState(null); // null | { ok, msg }
+  const [testing,   setTesting]   = useState(false);
 
   useEffect(() => {
     if (!storeId) return;
@@ -24,13 +28,39 @@ export default function RobotPage({ token, storeId }) {
 
   async function save() {
     setSaving(true);
-    await fetch(`/api/admin-products?type=bot&storeId=${storeId}`, {
+    const r = await fetch(`/api/admin-products?type=bot&storeId=${storeId}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json', 'x-admin-token': token },
       body: JSON.stringify(bot),
     });
-    setSaving(false); setSaved(true);
-    setTimeout(() => setSaved(false), 2000);
+    const d = await r.json().catch(() => ({}));
+    setSaving(false);
+    if (r.ok && d.ok) { setSaved(true); setTimeout(() => setSaved(false), 2500); }
+    else setTestLog({ ok: false, msg: `Erro ao salvar: ${JSON.stringify(d)}` });
+  }
+
+  async function testSend() {
+    if (!testPhone) return setTestLog({ ok: false, msg: 'Informe o número de teste.' });
+    if (!bot?.accountId) return setTestLog({ ok: false, msg: 'Selecione a conta WhatsApp acima.' });
+    const template = bot?.[testStep] || '';
+    const message = template
+      .replace(/\{\{nome\}\}/g, 'Cliente Teste')
+      .replace(/\{\{pedido\}\}/g, '123456')
+      .replace(/\{\{total\}\}/g, 'R$ 49,90');
+    setTesting(true); setTestLog(null);
+    try {
+      const r = await fetch(`/api/wa?action=send&id=${bot.accountId}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'x-admin-token': token },
+        body: JSON.stringify({ phone: testPhone.replace(/\D/g, ''), message }),
+      });
+      const d = await r.json().catch(() => ({}));
+      if (r.ok) setTestLog({ ok: true,  msg: `✅ Enviado! Resposta: ${JSON.stringify(d)}` });
+      else      setTestLog({ ok: false, msg: `❌ Erro ${r.status}: ${JSON.stringify(d)}` });
+    } catch(e) {
+      setTestLog({ ok: false, msg: `❌ Exceção: ${e.message}` });
+    }
+    setTesting(false);
   }
 
   function set(key, val) { setBot(b => ({ ...b, [key]: val })); }
@@ -105,6 +135,38 @@ export default function RobotPage({ token, storeId }) {
           </p>
         </div>
       ))}
+
+      {/* Test send panel */}
+      <div style={{ background: '#fff', border: '1px solid #e5e7eb', borderRadius: 12, padding: '16px 18px', marginBottom: 16 }}>
+        <p style={{ margin: '0 0 12px', fontSize: 13, fontWeight: 700, color: '#374151' }}>🧪 Testar envio</p>
+        <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginBottom: 10 }}>
+          <input
+            placeholder="Número (ex: 5511999999999)"
+            value={testPhone}
+            onChange={e => setTestPhone(e.target.value)}
+            style={{ flex: 1, minWidth: 200, padding: '8px 12px', borderRadius: 8, border: '1px solid #d1d5db', fontSize: 13 }}
+          />
+          <select
+            value={testStep}
+            onChange={e => setTestStep(e.target.value)}
+            style={{ padding: '8px 12px', borderRadius: 8, border: '1px solid #d1d5db', fontSize: 13 }}
+          >
+            {STEPS.map(s => <option key={s.key} value={s.key}>{s.label}</option>)}
+          </select>
+          <button className="adm-btn primary" style={{ fontSize: 13 }} onClick={testSend} disabled={testing}>
+            {testing ? '⏳ Enviando...' : '📤 Testar'}
+          </button>
+        </div>
+        {testLog && (
+          <div style={{ padding: '10px 12px', borderRadius: 8, fontSize: 12, fontFamily: 'monospace', wordBreak: 'break-all',
+            background: testLog.ok ? '#f0fdf4' : '#fef2f2',
+            color:      testLog.ok ? '#15803d' : '#dc2626',
+            border: `1px solid ${testLog.ok ? '#86efac' : '#fecaca'}`,
+          }}>
+            {testLog.msg}
+          </div>
+        )}
+      </div>
 
       <button
         className="adm-btn primary"

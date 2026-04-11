@@ -69,12 +69,17 @@ export default async function handler(req, res) {
     if (action === 'send' && method === 'POST') {
       const { phone, message } = req.body || {};
       if (!phone || !message) return res.status(400).json({ error: 'missing phone or message' });
-      const r = await fetch(backendUrl(`/whatsapp/${id}/send`), {
+      if (!id) return res.status(400).json({ error: 'missing account id' });
+      const url = backendUrl(`/whatsapp/${id}/send`);
+      console.log('[wa/send] url:', url, 'phone:', phone);
+      const r = await fetch(url, {
         method: 'POST',
         headers: hdrs({ 'Content-Type': 'application/json' }),
         body: JSON.stringify({ phone, message }),
       });
-      return res.status(r.status).json(await r.json());
+      let body; try { body = await r.json(); } catch { body = {}; }
+      console.log('[wa/send] status:', r.status, 'body:', JSON.stringify(body));
+      return res.status(r.status).json(body);
     }
 
     // POST /api/wa?action=pairing&id=xxx
