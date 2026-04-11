@@ -1,19 +1,21 @@
 // Serverless — envia evento de compra para Meta via Conversions API (CAPI)
+import { sb } from './_supabase.js';
+
 export default async function handler(req, res) {
-  if (req.method !== 'POST') {
-    return res.status(405).json({ error: 'Method not allowed' });
+  if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
+
+  const { event_name = 'Purchase', value, currency = 'BRL', event_id, order_id, store_id } = req.body;
+
+  // Load pixel config from store tracking settings
+  let PIXEL_ID, ACCESS_TOKEN;
+  if (store_id) {
+    const { data: store } = await sb().from('stores').select('settings').eq('id', store_id).maybeSingle();
+    const tracking = store?.settings?.tracking || {};
+    PIXEL_ID     = tracking.pixel_id;
+    ACCESS_TOKEN = tracking.pixel_access_token;
   }
 
-  const PIXEL_ID     = '930795412870152';
-  const ACCESS_TOKEN = 'EAAYVcxytQrABRCALovoSTcNa3qllr0HtFJ83Vy5ud7YkynrbSQtWqjd39ZA1IdZADvZCSmc1eES19NOqRR7cdi046DqvZBUOoo0leX2L7NbdZAuaVZBWZA38kfzFjT6K8j8FZBKswK3kx5MppRUtwYiko3q6UVmQGg8w7KPKoDzbQkrGX9l8vbb3FU638CJ4ieorKAZDZD';
-
-  const {
-    event_name = 'Purchase',
-    value,
-    currency = 'BRL',
-    event_id,
-    order_id,
-  } = req.body;
+  if (!PIXEL_ID || !ACCESS_TOKEN) return res.status(400).json({ error: 'Pixel not configured' });
 
   const eventData = {
     event_name,

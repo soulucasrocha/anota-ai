@@ -20,7 +20,7 @@ function firePixelPurchase(value, orderId) {
   } catch (e) { console.warn('fbq:', e); }
 }
 
-async function sendCapiPurchase(value, orderId) {
+async function sendCapiPurchase(value, orderId, storeId) {
   try {
     await fetch('/api/meta-event', {
       method:  'POST',
@@ -28,9 +28,10 @@ async function sendCapiPurchase(value, orderId) {
       body:    JSON.stringify({
         event_name: 'Purchase',
         value,
-        currency:  'BRL',
-        event_id:  orderId,
-        order_id:  orderId,
+        currency:   'BRL',
+        event_id:   orderId,
+        order_id:   orderId,
+        store_id:   storeId,
       }),
     });
   } catch (e) { console.warn('CAPI:', e); }
@@ -158,7 +159,7 @@ export default function PixScreen({ active, amount, cart, customer, deliveryAddr
     pollRef.current = setInterval(async () => {
       if (!id) return;
       try {
-        const res = await fetch(`/api/pix-status?id=${id}`);
+        const res = await fetch(`/api/pix?id=${id}`);
         if (!res.ok) return;
         const data = await res.json();
         if (data.status === 'paid') {
@@ -171,7 +172,7 @@ export default function PixScreen({ active, amount, cart, customer, deliveryAddr
             : null;
           sendUtmifyOrder(id, 'paid', amountRef.current, approvedDate, customerData);
           firePixelPurchase(amountRef.current, id);
-          sendCapiPurchase(amountRef.current, id);
+          sendCapiPurchase(amountRef.current, id, storeId);
           saveOrderToDashboard({
             pixId: id,
             cart,
@@ -243,7 +244,7 @@ export default function PixScreen({ active, amount, cart, customer, deliveryAddr
       fetch('/api/order-save?type=transaction', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ pixId: data.id, amount: amountRef.current, customer: cust, items, address: addressRef.current, storeId: storeId || undefined }),
+        body: JSON.stringify({ pixId: data.id, amount: amountRef.current, customer: cust, items, address: addressRef.current, storeId: storeId || undefined, hashtag: sessionStorage.getItem('campaign_ref') || null }),
       }).catch(() => {});
       const customerData = cust
         ? { name: cust.name || '', email: '', phone: cust.phone || '', document: '' }

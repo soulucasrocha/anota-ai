@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { fmtPrice } from '../../utils/helpers'
 import { searchAddress } from '../../utils/geo'
+import { geocodeAddress, findZone } from '../../utils/deliveryZone'
 
 function useDebounce(value, delay) {
   const [debouncedValue, setDebouncedValue] = useState(value);
@@ -19,53 +20,60 @@ const PM_INFO = {
   cash:          { icon: '💵', label: 'Dinheiro',         desc: 'Dinheiro ao receber',   online: false },
 };
 
-export default function FinalizeScreen({ active, address, onAddressChange, getCartTotal, onBack, onAdvance, geoData, slug, paymentMethodsData, defaultPaymentData }) {
-  const total      = getCartTotal();
-  const hasAddress = address.trim().length > 0;
-
+export default function FinalizeScreen({
+  active, address, onAddressChange, getCartTotal, onBack, onAdvance,
+  geoData, slug, paymentMethodsData, defaultPaymentData,
+  deliveryZones, deliveryAddress, onDeliveryFeeChange,
+}) {
   const [suggestions, setSuggestions] = useState([]);
   const [showSugg,    setShowSugg]    = useState(false);
   const [searching,   setSearching]   = useState(false);
   const [payMethods,  setPayMethods]  = useState({});
   const [selectedPay, setSelectedPay] = useState(null);
   const [changeFor,   setChangeFor]   = useState('');
-  const debouncedAddress = useDebounce(address, 500);
+  const [addrNumber,  setAddrNumber]  = useState('');
+
+  // Delivery zone state
+  const [zoneChecking, setZoneChecking]   = useState(false);
+  const [matchedZone,  setMatchedZone]    = useState(null);  // zone obj or null
+  const [outsideArea,  setOutsideArea]    = useState(false); // true only when zones configured + no match
+  const [storePos,     setStorePos]       = useState(null);
+
+  const debouncedAddress = useDebounce(address, 800);
   const inputRef = useRef(null);
 
-  // Apply payment methods from App.jsx props (already fetched on load)
+  const zonesConfigured = Array.isArray(deliveryZones) && deliveryZones.length > 0;
+
+  // Payment methods
   useEffect(() => {
     if (!paymentMethodsData) return;
     setPayMethods(paymentMethodsData);
     const def = defaultPaymentData;
-    if (def && paymentMethodsData[def]) {
-      setSelectedPay(def);
-    } else {
-      const first = Object.keys(PM_INFO).find(k => paymentMethodsData[k]);
-      setSelectedPay(first || null);
-    }
+    if (def && paymentMethodsData[def]) setSelectedPay(def);
+    else setSelectedPay(Object.keys(PM_INFO).find(k => paymentMethodsData[k]) || null);
   }, [paymentMethodsData, defaultPaymentData]);
 
-  // Fallback fetch if props not available (e.g. direct URL access)
   useEffect(() => {
     if (!active || paymentMethodsData) return;
     fetch(`/api/menu-public${slug ? `?slug=${slug}` : ''}`)
       .then(r => r.json())
       .then(d => {
-        if (d.paymentMethods) {
-          setPayMethods(d.paymentMethods);
-          const def = d.defaultPayment;
-          if (def && d.paymentMethods[def]) {
-            setSelectedPay(def);
-          } else {
-            const first = Object.keys(PM_INFO).find(k => d.paymentMethods[k]);
-            setSelectedPay(first || null);
-          }
-        }
+        if (!d.paymentMethods) return;
+        setPayMethods(d.paymentMethods);
+        const def = d.defaultPayment;
+        if (def && d.paymentMethods[def]) setSelectedPay(def);
+        else setSelectedPay(Object.keys(PM_INFO).find(k => d.paymentMethods[k]) || null);
       })
       .catch(() => {});
   }, [active, slug, paymentMethodsData]);
 
-  // Autocomplete
+  // Geocode store address once
+  useEffect(() => {
+    if (!deliveryAddress || storePos) return;
+    geocodeAddress(deliveryAddress).then(pos => { if (pos) setStorePos(pos); });
+  }, [deliveryAddress, storePos]);
+
+  // Autocomplete suggestions
   useEffect(() => {
     if (!active) return;
     if (debouncedAddress.length < 4) { setSuggestions([]); return; }
@@ -77,13 +85,37 @@ export default function FinalizeScreen({ active, address, onAddressChange, getCa
     return () => { cancelled = true; };
   }, [debouncedAddress, active]);
 
-  // Pré-preenche quando geoData chegar e campo ainda vazio
+  // Pre-fill from geolocation
   useEffect(() => {
-    if (geoData?.shortAddress && !address) {
-      onAddressChange(geoData.shortAddress);
-    }
+    if (geoData?.shortAddress && !address) onAddressChange(geoData.shortAddress);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [geoData]);
+
+  // Check delivery zone when address changes
+  useEffect(() => {
+    if (!active || !zonesConfigured || debouncedAddress.length < 6) {
+      setMatchedZone(null);
+      setOutsideArea(false);
+      onDeliveryFeeChange?.(0);
+      return;
+    }
+    let cancelled = false;
+    setZoneChecking(true);
+    geocodeAddress(debouncedAddress).then(async customerPos => {
+      if (cancelled) return;
+      let sPos = storePos;
+      if (!sPos && deliveryAddress) sPos = await geocodeAddress(deliveryAddress);
+      if (cancelled) return;
+      const zone = findZone(sPos, customerPos, deliveryZones);
+      setMatchedZone(zone);
+      setOutsideArea(!zone);
+      onDeliveryFeeChange?.(zone?.fee || 0);
+      setZoneChecking(false);
+    }).catch(() => {
+      if (!cancelled) { setZoneChecking(false); }
+    });
+    return () => { cancelled = true; };
+  }, [debouncedAddress, active, zonesConfigured]);
 
   const pickSuggestion = useCallback((label) => {
     onAddressChange(label);
@@ -92,15 +124,23 @@ export default function FinalizeScreen({ active, address, onAddressChange, getCa
     inputRef.current?.blur();
   }, [onAddressChange]);
 
+  const hasAddress    = address.trim().length > 0;
   const hasEnabledPay = Object.keys(PM_INFO).some(k => payMethods[k]);
   const isPayDisabled = !selectedPay || !payMethods[selectedPay];
+  const isBlocked     = zonesConfigured && outsideArea;
+
+  const deliveryFee = matchedZone?.fee || 0;
+  const total       = getCartTotal();
+  const grandTotal  = total + deliveryFee;
 
   const btnLabel = () => {
     if (!hasAddress) return 'Informe o endereço';
+    if (zoneChecking) return 'Verificando área...';
+    if (isBlocked) return 'Fora da área de entrega';
     if (!hasEnabledPay) return 'Sem forma de pagamento';
     const info = PM_INFO[selectedPay];
-    if (info?.online) return `Ir para pagamento • ${fmtPrice(total)}`;
-    return `Confirmar pedido • ${fmtPrice(total)}`;
+    if (info?.online) return `Ir para pagamento • ${fmtPrice(grandTotal)}`;
+    return `Confirmar pedido • ${fmtPrice(grandTotal)}`;
   };
 
   return (
@@ -125,10 +165,10 @@ export default function FinalizeScreen({ active, address, onAddressChange, getCa
             <input
               ref={inputRef}
               className="checkout-input"
-              placeholder="Rua, número, bairro"
+              placeholder="Rua, bairro, cidade"
               autoComplete="off"
               value={address}
-              onChange={e => { onAddressChange(e.target.value); setShowSugg(true); }}
+              onChange={e => { onAddressChange(e.target.value); setShowSugg(true); setMatchedZone(null); setOutsideArea(false); }}
               onFocus={() => setShowSugg(true)}
               onBlur={() => setTimeout(() => setShowSugg(false), 150)}
             />
@@ -146,10 +186,64 @@ export default function FinalizeScreen({ active, address, onAddressChange, getCa
               </ul>
             )}
           </div>
-          {geoData?.shortAddress && address === geoData.shortAddress && (
-            <p className="finalize-geo-hint">📍 Endereço detectado automaticamente</p>
+
+          <input
+            className="checkout-input"
+            placeholder="Número (ex: 42, 200, S/N)"
+            style={{ marginTop: 8 }}
+            value={addrNumber}
+            onChange={e => setAddrNumber(e.target.value)}
+          />
+
+          {/* Zone feedback */}
+          {zonesConfigured && hasAddress && (
+            <div style={{ marginTop: 10 }}>
+              {zoneChecking ? (
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 14px', background: '#f9fafb', borderRadius: 10, border: '1px solid #e5e7eb' }}>
+                  <span style={{ fontSize: 14 }}>🔍</span>
+                  <span style={{ fontSize: 13, color: '#6b7280' }}>Verificando área de entrega...</span>
+                </div>
+              ) : outsideArea ? (
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 14px', background: '#fef2f2', borderRadius: 10, border: '1px solid #fecaca' }}>
+                  <span style={{ fontSize: 16 }}>🚫</span>
+                  <div>
+                    <p style={{ margin: 0, fontSize: 13, fontWeight: 700, color: '#dc2626' }}>Fora da área de entrega</p>
+                    <p style={{ margin: 0, fontSize: 12, color: '#ef4444' }}>Infelizmente não entregamos neste endereço.</p>
+                  </div>
+                </div>
+              ) : matchedZone ? (
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 14px', background: '#f0fdf4', borderRadius: 10, border: '1px solid #86efac' }}>
+                  <span style={{ fontSize: 16 }}>✅</span>
+                  <div>
+                    <p style={{ margin: 0, fontSize: 13, fontWeight: 700, color: '#16a34a' }}>
+                      Entregamos aqui — {matchedZone.name}
+                    </p>
+                    <p style={{ margin: 0, fontSize: 12, color: '#15803d' }}>
+                      Taxa de entrega: <strong>{deliveryFee === 0 ? 'Grátis' : fmtPrice(deliveryFee)}</strong>
+                    </p>
+                  </div>
+                </div>
+              ) : null}
+            </div>
           )}
         </div>
+
+        {/* Resumo de valores */}
+        {deliveryFee > 0 && (
+          <div className="finalize-section">
+            <h4 className="finalize-section-title">Resumo</h4>
+            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, color: '#6b7280', marginBottom: 6 }}>
+              <span>Subtotal</span><span>{fmtPrice(total)}</span>
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, color: '#6b7280', marginBottom: 8 }}>
+              <span>Taxa de entrega ({matchedZone?.name})</span>
+              <span style={{ color: '#e53935', fontWeight: 600 }}>+ {fmtPrice(deliveryFee)}</span>
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 15, fontWeight: 800, color: '#1e2740', borderTop: '1px solid #f3f4f6', paddingTop: 8 }}>
+              <span>Total</span><span>{fmtPrice(grandTotal)}</span>
+            </div>
+          </div>
+        )}
 
         {/* Forma de pagamento */}
         <div className="finalize-section">
@@ -158,12 +252,7 @@ export default function FinalizeScreen({ active, address, onAddressChange, getCa
             const info = PM_INFO[key];
             const sel = selectedPay === key;
             return (
-              <div
-                key={key}
-                className={'pay-option' + (sel ? ' selected' : '')}
-                onClick={() => setSelectedPay(key)}
-                style={{ cursor: 'pointer' }}
-              >
+              <div key={key} className={'pay-option' + (sel ? ' selected' : '')} onClick={() => setSelectedPay(key)} style={{ cursor: 'pointer' }}>
                 <div className="pay-option-icon">{info.icon}</div>
                 <div className="pay-option-info">
                   <span className="pay-option-name">{info.label}</span>
@@ -173,63 +262,29 @@ export default function FinalizeScreen({ active, address, onAddressChange, getCa
               </div>
             );
           })}
-          {/* Cash change field */}
           {selectedPay === 'cash' && (
             <div className="cash-change-box">
               <label className="cash-change-label">💵 Troco para quanto? <span style={{color:'#aaa',fontWeight:400}}>(opcional)</span></label>
-              <input
-                type="number"
-                className="checkout-input"
-                placeholder="Ex: 100"
-                value={changeFor}
-                onChange={e => setChangeFor(e.target.value)}
-                style={{ marginTop: 8 }}
-              />
+              <input type="number" className="checkout-input" placeholder="Ex: 100"
+                value={changeFor} onChange={e => setChangeFor(e.target.value)} style={{ marginTop: 8 }} />
               {changeFor && Number(changeFor) > 0 && (
                 <p className="cash-change-info">
-                  {Number(changeFor) * 100 > total
-                    ? `Troco: ${fmtPrice(Number(changeFor) * 100 - total)}`
+                  {Number(changeFor) * 100 > grandTotal
+                    ? `Troco: ${fmtPrice(Number(changeFor) * 100 - grandTotal)}`
                     : '✅ Sem troco necessário'}
                 </p>
               )}
             </div>
           )}
         </div>
-
-        {/* Informações de entrega */}
-        <div className="finalize-section finalize-delivery-info">
-          <p className="finalize-delivery-text">
-            Nossas entregas são terceirizadas, as entregas são feitas pela
-          </p>
-          <div className="finalize-delivery-logos">
-            <span className="finalize-delivery-partner">
-              <img
-                src="https://logodownload.org/wp-content/uploads/2017/05/ifood-logo.png"
-                alt="iFood"
-                className="finalize-partner-logo"
-                onError={e => { e.target.style.display='none'; }}
-              />
-              iFood
-            </span>
-            <span className="finalize-delivery-or">ou pela</span>
-            <span className="finalize-delivery-partner">
-              <img
-                src="https://upload.wikimedia.org/wikipedia/commons/thumb/3/37/99_Logo.svg/512px-99_Logo.svg.png"
-                alt="99food"
-                className="finalize-partner-logo finalize-partner-logo-99"
-                onError={e => { e.target.style.display='none'; }}
-              />
-              99food
-            </span>
-          </div>
-        </div>
       </div>
 
       <div className="screen-footer">
         <button
           className="screen-advance-btn"
-          disabled={!hasAddress || isPayDisabled}
-          onClick={() => hasAddress && !isPayDisabled && onAdvance(selectedPay, changeFor ? Number(changeFor) : null)}
+          disabled={!hasAddress || isPayDisabled || isBlocked || zoneChecking}
+          onClick={() => hasAddress && !isPayDisabled && !isBlocked && !zoneChecking
+            && onAdvance(selectedPay, changeFor ? Number(changeFor) : null, addrNumber.trim() || null)}
         >
           {btnLabel()}
         </button>

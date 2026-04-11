@@ -8,23 +8,38 @@ export default async function handler(req, res) {
 
   // ?type=transaction — save PIX transaction (was transaction-save.js)
   if (req.query.type === 'transaction') {
-    const { pixId, amount, customer, items, address } = req.body || {};
+    const { pixId, amount, customer, items, address, hashtag } = req.body || {};
     if (!pixId || !amount) return res.status(400).json({ error: 'missing fields' });
     await sb().from('transactions').upsert({
       id: pixId, store_id: storeId || null, pix_id: pixId, amount,
       customer: customer || {}, items: items || [], address: address || '',
+      hashtag: hashtag || null,
       status: 'pending', created_at: new Date().toISOString(),
     }, { onConflict: 'id' });
     return res.status(200).json({ ok: true });
   }
 
   // Default: save order
-  const { pixId, items, total, customer, address, status, paymentMethod, deliveryPayment, changeFor, changeNote } = req.body || {};
+  const { pixId, items, total, delivery_fee, customer, address, status, paymentMethod, deliveryPayment, changeFor, changeNote, hashtag } = req.body || {};
   if (!total) return res.status(400).json({ error: 'missing total' });
+
+  // Cross-reference customer phone with WhatsApp leads to get tag + name
+  let waTag = hashtag || null;
+  let waName = null;
+  const phone = customer?.phone ? customer.phone.replace(/\D/g, '') : null;
+  if (phone) {
+    const { data: lead } = await sb()
+      .from('wa_leads')
+      .select('tag, name')
+      .eq('phone', phone)
+      .order('updated_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    if (lead) { waTag = waTag || lead.tag; waName = lead.name; }
+  }
 
   const isDeliveryPay = deliveryPayment === true || ['card_delivery', 'pix_delivery', 'cash'].includes(paymentMethod);
   const resolvedStatus = status || (isDeliveryPay ? 'pending' : 'paid');
-  // Online orders confirmed (status=paid) go straight to 'preparing'; delivery orders go to 'pending'
   const kanbanStatus = (resolvedStatus === 'paid' && !isDeliveryPay) ? 'preparing' : 'pending';
   const order = {
     id: pixId || `ord-${Date.now()}`,
@@ -39,8 +54,13 @@ export default async function handler(req, res) {
     delivery_payment: isDeliveryPay,
     kanban_status: kanbanStatus,
     finalized: false,
+    delivery_fee: delivery_fee || 0,
     change_for: changeFor || null,
     change_note: changeNote || null,
+    hashtag: waTag,
+    wa_tag: waTag,
+    wa_name: waName,
+    wa_phone: phone,
     created_at: new Date().toISOString(),
   };
 

@@ -8,9 +8,11 @@ import OrdersPage         from './pages/OrdersPage';
 import TransactionsPage   from './pages/TransactionsPage';
 import PaymentMethodsPage from './pages/PaymentMethodsPage';
 import StoreProfilePage   from './pages/StoreProfilePage';
-import TrackingPage       from './pages/TrackingPage';
 import PrinterPage        from './pages/PrinterPage';
 import DeliveryAreaPage   from './pages/DeliveryAreaPage';
+import CampaignsPage      from './pages/CampaignsPage';
+import IntegrationsPage   from './pages/IntegrationsPage';
+import RobotPage          from './pages/RobotPage';
 
 export default function AdminApp() {
   const [token,    setToken]    = useState(() => localStorage.getItem('adm_token') || null);
@@ -69,9 +71,11 @@ export default function AdminApp() {
     transactions: <TransactionsPage token={token} storeId={storeId} />,
     payments:     <PaymentMethodsPage token={token} storeId={storeId} />,
     profile:      <StoreProfilePage token={token} storeId={storeId} store={currentStore} onUpdated={reloadStores} />,
-    tracking:     <TrackingPage     token={token} storeId={storeId} />,
-    delivery:     <DeliveryAreaPage token={token} storeId={storeId} />,
-    printer:      <PrinterPage      token={token} storeId={storeId} store={currentStore} />,
+    delivery:     <DeliveryAreaPage  token={token} storeId={storeId} />,
+    printer:      <PrinterPage       token={token} storeId={storeId} store={currentStore} />,
+    campaigns:    <CampaignsPage     token={token} storeId={storeId} store={currentStore} />,
+    integrations: <IntegrationsPage  token={token} storeId={storeId} />,
+    robot:        <RobotPage         token={token} storeId={storeId} />,
   };
 
   return (

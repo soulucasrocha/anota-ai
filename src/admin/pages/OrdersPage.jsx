@@ -75,7 +75,14 @@ function OrderTimer({ createdAt, deliveryMinutes }) {
   }
 }
 
-function OrderCard({ order, token, storeId, onMoved, onFinalized, col, autoPrint, deliveryMinutes }) {
+function applyBotVars(template, order) {
+  const nome   = order.customer?.name || '';
+  const pedido = String(order.id).slice(-6);
+  const total  = 'R$ ' + ((order.total || 0) / 100).toFixed(2).replace('.', ',');
+  return template.replace(/\{\{nome\}\}/g, nome).replace(/\{\{pedido\}\}/g, pedido).replace(/\{\{total\}\}/g, total);
+}
+
+function OrderCard({ order, token, storeId, onMoved, onFinalized, col, autoPrint, deliveryMinutes, botConfig }) {
   const [moving,    setMoving]    = useState(false);
   const [finishing, setFinishing] = useState(false);
 
@@ -91,6 +98,20 @@ function OrderCard({ order, token, storeId, onMoved, onFinalized, col, autoPrint
       });
       onMoved(order.id, nextStatus);
       if (nextStatus === 'preparing' && autoPrint) printOrder(order);
+
+      // Send WA notification if bot enabled
+      const bot = botConfig;
+      if (bot?.enabled && bot?.accountId && bot?.[nextStatus]) {
+        const phone = (order.customer?.phone || order.wa_phone || '').replace(/\D/g, '');
+        if (phone) {
+          const message = applyBotVars(bot[nextStatus], order);
+          fetch(`/api/wa?action=send&id=${bot.accountId}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'x-admin-token': token },
+            body: JSON.stringify({ phone, message }),
+          }).catch(() => {});
+        }
+      }
     } catch {}
     setMoving(false);
   }
@@ -300,6 +321,14 @@ export default function OrdersPage({ token, storeId }) {
     };
     reader.readAsDataURL(file);
   }
+
+  // Bot config
+  const [botConfig, setBotConfig] = useState(null);
+  useEffect(() => {
+    if (!storeId) return;
+    fetch(`/api/admin-products?type=bot&storeId=${storeId}`, { headers: { 'x-admin-token': token } })
+      .then(r => r.json()).then(d => setBotConfig(d.bot || null)).catch(() => {});
+  }, [token, storeId]);
 
   // Fetch delivery time
   useEffect(() => {
@@ -513,6 +542,7 @@ export default function OrdersPage({ token, storeId }) {
                       col={col.key}
                       autoPrint={autoPrint}
                       deliveryMinutes={deliveryMinutes}
+                      botConfig={botConfig}
                     />
                   ))
                 )}

@@ -50,6 +50,26 @@ export default async function handler(req, res) {
     }
   }
 
+  // ── Bot (WhatsApp robot) config ───────────────────────────────────────
+  if (req.query.type === 'bot') {
+    if (!storeId) return res.status(400).json({ error: 'missing storeId' });
+    const DEFAULT_BOT = {
+      enabled: false, accountId: '',
+      preparing: 'Olá {{nome}}! 🍕 Seu pedido #{{pedido}} foi aceito e já está sendo preparado. Logo chegará até você!',
+      delivering: 'Olá {{nome}}! 🛵 Seu pedido #{{pedido}} saiu para entrega! Está a caminho.',
+      delivered: 'Olá {{nome}}! ✅ Seu pedido #{{pedido}} foi entregue. Obrigado pela preferência! 😋',
+    };
+    if (req.method === 'GET') {
+      const { data } = await sb().from('store_settings').select('bot_messages').eq('store_id', storeId).maybeSingle();
+      return res.status(200).json({ bot: { ...DEFAULT_BOT, ...(data?.bot_messages || {}) } });
+    }
+    if (req.method === 'PATCH') {
+      await sb().from('store_settings').upsert({ store_id: storeId, bot_messages: req.body, updated_at: new Date().toISOString() }, { onConflict: 'store_id' });
+      return res.status(200).json({ ok: true });
+    }
+    return res.status(405).end();
+  }
+
   // ── Categories config ─────────────────────────────────────────────────
   if (req.query.type === 'categories') {
     if (!storeId) return res.status(400).json({ error: 'missing storeId' });
@@ -76,6 +96,22 @@ export default async function handler(req, res) {
     }
     if (req.method === 'PATCH') {
       await sb().from('store_settings').upsert({ store_id: storeId, tracking: req.body, updated_at: new Date().toISOString() }, { onConflict: 'store_id' });
+      return res.status(200).json({ ok: true });
+    }
+    return res.status(405).end();
+  }
+
+  // ── Generic settings (campaigns, integrations, etc.) ──────────────────
+  if (req.query.type === 'settings') {
+    if (!storeId) return res.status(400).json({ error: 'missing storeId' });
+    if (req.method === 'GET') {
+      const { data } = await sb().from('store_settings').select('settings').eq('store_id', storeId).maybeSingle();
+      return res.status(200).json({ settings: data?.settings || {} });
+    }
+    if (req.method === 'PATCH') {
+      const { data: existing } = await sb().from('store_settings').select('settings').eq('store_id', storeId).maybeSingle();
+      const merged = { ...(existing?.settings || {}), ...req.body };
+      await sb().from('store_settings').upsert({ store_id: storeId, settings: merged }, { onConflict: 'store_id' });
       return res.status(200).json({ ok: true });
     }
     return res.status(405).end();

@@ -5,9 +5,11 @@ const NAV = [
   { key: 'products',     icon: '🍕', label: 'Cardápio'             },
   { key: 'orders',       icon: '🧾', label: 'Pedidos (Kanban)'     },
   { key: 'transactions', icon: '💳', label: 'Transações'           },
+  { key: 'campaigns',    icon: '🎨', label: 'Criativo'             },
+  { key: 'integrations', icon: '🔌', label: 'Integrações'          },
+  { key: 'robot',        icon: '🤖', label: 'Robô'                  },
   { key: 'payments',     icon: '💲', label: 'Formas de Pagamento'  },
   { key: 'profile',      icon: '🏪', label: 'Perfil da Loja'       },
-  { key: 'tracking',     icon: '📡', label: 'Rastreamento'         },
   { key: 'delivery',     icon: '🗺️', label: 'Área de Entrega'      },
   { key: 'printer',      icon: '🖨️', label: 'Impressora'           },
 ];
@@ -19,9 +21,10 @@ export default function AdminLayout({ page, setPage, onLogout, children, stores,
 
   const titles = {
     dashboard: 'Dashboard', products: 'Cardápio',
-    orders: 'Pedidos (Kanban)', transactions: 'Transações PIX',
+    orders: 'Pedidos (Kanban)', transactions: 'Transações',
+    campaigns: 'Criativo', integrations: 'Integrações', robot: 'Robô WhatsApp',
     payments: 'Formas de Pagamento', profile: 'Perfil da Loja',
-    tracking: 'Rastreamento', delivery: 'Área de Entrega', printer: 'Impressora',
+    delivery: 'Área de Entrega', printer: 'Impressora',
   };
 
   function handleCreateStore(e) {

@@ -137,10 +137,11 @@ function buildPrintHTML(order, paperWidth = 300, fontSize = 'normal') {
     order.change_note ? `<b>${order.change_note}</b><br/>` : '',
     `<hr/>`,
     ...(order.items || []).flatMap(i => [
-      `${i.qty || 1}x ${i.name} &nbsp; ${fmtPrice((i.price || 0) * (i.qty || 1))}<br/>`,
-      i.note ? `&nbsp;&nbsp;<i>${i.note}</i><br/>` : '',
+      `${i.qty || 1}x <b>${i.name}</b> &nbsp; ${fmtPrice((i.price || 0) * (i.qty || 1))}<br/>`,
+      i.note ? `&nbsp;&nbsp;&nbsp;<span style="color:#555">${i.note}</span><br/><br/>` : '',
     ]),
     `<hr/>`,
+    order.delivery_fee > 0 ? `Taxa de entrega: ${fmtPrice(order.delivery_fee)}<br/>` : '',
     `<b>TOTAL: ${fmtPrice(order.total || 0)}</b><br/>`,
     `Pgto: ${pm[order.payment_method || order.paymentMethod] || '—'}<br/>`,
     `<br/><br/>`,
@@ -193,9 +194,10 @@ function buildEscPos(order, fontSize = 'normal') {
     const name  = (i.name || '').slice(0, 22).padEnd(22);
     const price = fmtPrice((i.price || 0) * (i.qty || 1)).padStart(10);
     add(`${i.qty || 1}x ${name}${price}` + LF);
-    if (i.note) add(`   ${i.note}` + LF);
+    if (i.note) { add(`   > ${i.note}` + LF); add(LF); }
   });
   add(SEP);
+  if (order.delivery_fee > 0) add(`Entrega: ${fmtPrice(order.delivery_fee)}` + LF);
   add(ESC + 'E\x01');
   add(`TOTAL: ${fmtPrice(order.total || 0)}` + LF);
   add(ESC + 'E\x00');

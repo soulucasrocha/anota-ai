@@ -23,10 +23,11 @@ export default async function handler(req, res) {
     if (!storeId) return res.status(200).json({ source: 'static', paymentMethods: { pix_online: true } });
 
     // Get store info + settings + products in parallel
-    const [{ data: storeInfo }, { data: settings }, { data: products }] = await Promise.all([
+    const [{ data: storeInfo }, { data: settings }, { data: products }, { data: trackingRow }] = await Promise.all([
       sb().from('stores').select('name, logo_url, whatsapp, hours').eq('id', storeId).maybeSingle(),
       sb().from('store_settings').select('payment_methods, delivery, categories').eq('store_id', storeId).maybeSingle(),
       sb().from('products').select('id,category,name,description,price,old_price,tag,img,active,sold_out,steps,subproducts,subproduct_limit,sort_order').eq('store_id', storeId).eq('active', true).order('sort_order').order('name'),
+      sb().from('store_settings').select('tracking').eq('store_id', storeId).maybeSingle(),
     ]);
 
     const paymentMethods = settings?.payment_methods || { pix_online: true, card_online: false, card_delivery: false, pix_delivery: false, cash: false };
@@ -45,6 +46,7 @@ export default async function handler(req, res) {
       ? savedCats.map(c => ({ id: c.id, label: c.name, description: c.description || '' }))
       : DEFAULT_ORDER.map(id => ({ id, label: id.charAt(0).toUpperCase() + id.slice(1), description: '' }));
 
+    const tracking = trackingRow?.tracking || {};
     const storeMeta = {
       storeName:    storeInfo?.name || '',
       storeLogoUrl: storeInfo?.logo_url || '',
@@ -53,6 +55,10 @@ export default async function handler(req, res) {
       defaultPayment,
       minOrder,
       categories: categoriesList,
+      pixelId: tracking.pixel_id || null,
+      gtmId:   tracking.gtm_id   || null,
+      deliveryZones:   delivery?.zones   || [],
+      deliveryAddress: delivery?.address || '',
     };
 
     if (!products || !products.length) {

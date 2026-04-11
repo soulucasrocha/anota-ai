@@ -26,31 +26,56 @@ function BarChart({ data }) {
   );
 }
 
+const RANGES = [
+  { key: 'today',     label: 'Hoje'    },
+  { key: 'yesterday', label: 'Ontem'   },
+  { key: '7d',        label: '7 dias'  },
+  { key: '30d',       label: '30 dias' },
+];
+
 export default function DashboardHome({ token, storeId }) {
-  const [stats, setStats] = useState(null);
+  const [stats,   setStats]   = useState(null);
   const [loading, setLoading] = useState(true);
+  const [range,   setRange]   = useState('today');
 
   useEffect(() => {
     if (!storeId) return;
-    fetch(`/api/admin-stats?storeId=${storeId}`, { headers: { 'x-admin-token': token } })
+    setLoading(true);
+    fetch(`/api/admin-stats?storeId=${storeId}&period=${range}`, { headers: { 'x-admin-token': token } })
       .then(r => r.json())
       .then(d => { setStats(d); setLoading(false); })
       .catch(() => setLoading(false));
-  }, [token, storeId]);
+  }, [token, storeId, range]);
 
   if (loading) return <div style={{ padding: 40, textAlign: 'center', color: '#aaa' }}>Carregando...</div>;
 
   const s = stats || {};
 
   const CARDS = [
-    { icon: '💰', color: 'green',  label: 'Faturamento Hoje',   value: fmtMoney(s.todayRevenue || 0), sub: `Total: ${fmtMoney(s.totalRevenue || 0)}` },
-    { icon: '🛒', color: 'blue',   label: 'Pedidos Hoje',        value: s.todayOrders || 0,             sub: `Total: ${s.totalOrders || 0} pedidos` },
+    { icon: '💰', color: 'green',  label: `Faturamento (${rangeLabel})`, value: fmtMoney(s.totalRevenue || 0), sub: `Ticket médio: ${fmtMoney(s.avgTicket || 0)}` },
+    { icon: '🛒', color: 'blue',   label: `Pedidos (${rangeLabel})`,     value: s.totalOrders || 0,            sub: `${s.totalOrders || 0} pedidos no período` },
     { icon: '🎯', color: 'orange', label: 'Ticket Médio',        value: fmtMoney(s.avgTicket || 0),    sub: 'por pedido' },
     { icon: '🏆', color: 'red',    label: 'Produto Mais Vendido', value: s.topProducts?.[0]?.name?.split(' ').slice(0, 3).join(' ') || '—', sub: `${s.topProducts?.[0]?.count || 0} vendidos` },
   ];
 
+  const rangeLabel = RANGES.find(r => r.key === range)?.label || 'Hoje';
+
   return (
     <>
+      {/* Date range filter */}
+      <div style={{ display: 'flex', gap: 8, marginBottom: 24 }}>
+        {RANGES.map(r => (
+          <button key={r.key} onClick={() => setRange(r.key)} style={{
+            padding: '7px 18px', borderRadius: 8, fontSize: 13, fontWeight: 600,
+            cursor: 'pointer', border: '1.5px solid',
+            borderColor: range === r.key ? '#ef4444' : '#e5e7eb',
+            background:  range === r.key ? '#fef2f2' : '#fff',
+            color:       range === r.key ? '#ef4444' : '#9ca3af',
+            transition: 'all .15s',
+          }}>{r.label}</button>
+        ))}
+      </div>
+
       {/* Stat cards */}
       <div className="adm-stats-grid">
         {CARDS.map(c => (

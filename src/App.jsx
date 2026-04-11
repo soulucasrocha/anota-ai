@@ -16,7 +16,6 @@ import DeliveryWaitingScreen from './components/screens/DeliveryWaitingScreen'
 import ProductModal from './components/modals/ProductModal'
 import CheckoutConfirmPopup from './components/modals/CheckoutConfirmPopup'
 import CartBar from './components/CartBar'
-import DeliveryBanner from './components/DeliveryBanner'
 
 // ── Persistência de sessão ─────────────────────────────────────────────────
 const SESSION_KEY = 'app_session_v2';
@@ -43,6 +42,12 @@ function saveSession(data) {
 export default function App() {
   const { slug } = useParams();
   useEffect(() => { persistUtms(); }, []);
+
+  // Captura hashtag de campanha (?ref=HASHTAG) e persiste na sessão
+  useEffect(() => {
+    const ref = new URLSearchParams(window.location.search).get('ref');
+    if (ref) sessionStorage.setItem('campaign_ref', ref);
+  }, []);
 
   // Carrega sessão salva para restaurar estado após refresh
   const _s = loadSession();
@@ -115,6 +120,9 @@ export default function App() {
   const [menuCategories, setMenuCategories]     = useState([]);
   const [paymentMethods, setPaymentMethods]     = useState(null);
   const [defaultPayment, setDefaultPayment]     = useState(null);
+  const [deliveryZones,  setDeliveryZones]      = useState([]);
+  const [deliveryAddress,setDeliveryAddress]    = useState('');
+  const [deliveryFee,    setDeliveryFee]        = useState(0);
 
   // Wrapper de setScreen que salva na sessão
   const setScreen = useCallback((s) => {
@@ -143,6 +151,21 @@ export default function App() {
         if (d.categories && d.categories.length > 0) setMenuCategories(d.categories);
         if (d.paymentMethods) setPaymentMethods(d.paymentMethods);
         if (d.defaultPayment) setDefaultPayment(d.defaultPayment);
+        if (d.deliveryZones)   setDeliveryZones(d.deliveryZones);
+        if (d.deliveryAddress) setDeliveryAddress(d.deliveryAddress);
+        // Inject tracking scripts
+        if (d.gtmId && !document.getElementById('gtm-script')) {
+          const s = document.createElement('script');
+          s.id = 'gtm-script';
+          s.innerHTML = `(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src='https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);})(window,document,'script','dataLayer','${d.gtmId}');`;
+          document.head.appendChild(s);
+        }
+        if (d.pixelId && !document.getElementById('fb-pixel-script')) {
+          const s = document.createElement('script');
+          s.id = 'fb-pixel-script';
+          s.innerHTML = `!function(f,b,e,v,n,t,s){if(f.fbq)return;n=f.fbq=function(){n.callMethod?n.callMethod.apply(n,arguments):n.queue.push(arguments)};if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';n.queue=[];t=b.createElement(e);t.async=!0;t.src=v;s=b.getElementsByTagName(e)[0];s.parentNode.insertBefore(t,s)}(window,document,'script','https://connect.facebook.net/en_US/fbevents.js');fbq('init','${d.pixelId}');fbq('track','PageView');`;
+          document.head.appendChild(s);
+        }
       })
       .catch(() => {}); // silently fall back to static menu
   }, [slug]);
@@ -274,7 +297,8 @@ export default function App() {
   const handleDeliveryOrder = useCallback(async (method, changeFor) => {
     const items = Object.values(cart).map(({ item, qty }) => ({ id: item.id, name: item.name, qty, price: item.price, note: item.cartNote || '' }));
     const orderId = `del-${Date.now()}`;
-    const total = getCartTotal();
+    const subtotal = getCartTotal();
+    const total = subtotal + deliveryFee;
     // Build change note if cash payment
     const changeNote = (method === 'cash' && changeFor && changeFor * 100 > total)
       ? `Troco para R$${changeFor.toFixed(2).replace('.',',')} (R$${((changeFor * 100 - total) / 100).toFixed(2).replace('.',',')} de troco)`
@@ -287,6 +311,7 @@ export default function App() {
           pixId: orderId,
           items,
           total,
+          delivery_fee: deliveryFee,
           customer: { name: checkoutName, phone: checkoutPhone },
           address,
           paymentMethod: method,
@@ -294,6 +319,7 @@ export default function App() {
           storeId: storeId || undefined,
           changeFor: changeFor || null,
           changeNote: changeNote || null,
+          hashtag: sessionStorage.getItem('campaign_ref') || null,
         }),
       });
     } catch {}
@@ -331,7 +357,6 @@ export default function App() {
       )}
 
       <CategoryNav categories={menuCategories} />
-      <DeliveryBanner geoData={geoData} />
       <MenuMain onItemClick={handleItemClick} menu={dynamicMenu} categories={menuCategories} />
 
       <CartBar
@@ -388,7 +413,8 @@ export default function App() {
         onAddressChange={setAddress}
         getCartTotal={getCartTotal}
         onBack={() => setScreen('checkout')}
-        onAdvance={(method, changeFor) => {
+        onAdvance={(method, changeFor, addrNumber) => {
+          if (addrNumber) setAddress(prev => prev + (prev ? `, nº ${addrNumber}` : addrNumber));
           setPaymentMethod(method);
           const isOnline = method === 'pix_online' || method === 'card_online';
           if (isOnline) {
@@ -401,6 +427,9 @@ export default function App() {
         slug={slug}
         paymentMethodsData={paymentMethods}
         defaultPaymentData={defaultPayment}
+        deliveryZones={deliveryZones}
+        deliveryAddress={deliveryAddress}
+        onDeliveryFeeChange={setDeliveryFee}
       />
 
       <PixScreen
