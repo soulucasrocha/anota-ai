@@ -224,6 +224,8 @@ const SOUND_PRESETS = [
   { key: 'preset3', label: '⏰ Timer de cozinha',  desc: 'Bip-bip rápido urgente'      },
   { key: 'preset4', label: '🎶 Ding-Dong',         desc: 'Dois tons de interfone'      },
   { key: 'preset5', label: '🚨 Alerta',            desc: 'Sinal de atenção pulsante'   },
+  { key: 'preset6', label: '🍕 Estilo Anota.ai',   desc: 'Duplo bip agudo característico' },
+  { key: 'preset7', label: '🛵 Estilo iFood',      desc: '3 tons descendentes suaves'  },
 ];
 
 function playPreset(ctx, key) {
@@ -263,6 +265,21 @@ function playPreset(ctx, key) {
       tone(880,  s,        0.18, 0.5, 'sawtooth');
       tone(1100, s + 0.09, 0.12, 0.4, 'sawtooth');
     });
+  } else if (key === 'preset6') {
+    // Estilo Anota.ai: dois bips agudos rápidos + sustain
+    tone(1568, 0,    0.10, 0.55, 'sine');
+    tone(1568, 0,    0.10, 0.20, 'triangle');
+    tone(1568, 0.16, 0.22, 0.50, 'sine');
+    tone(1568, 0.16, 0.22, 0.18, 'triangle');
+    tone(784,  0.17, 0.18, 0.12, 'sine'); // harmonic undertone
+  } else if (key === 'preset7') {
+    // Estilo iFood: 3 tons descendentes suaves (dó-lá-fá)
+    tone(1046, 0,    0.28, 0.48, 'sine');
+    tone(1046, 0,    0.28, 0.12, 'triangle');
+    tone(880,  0.22, 0.28, 0.44, 'sine');
+    tone(880,  0.22, 0.28, 0.10, 'triangle');
+    tone(698,  0.44, 0.38, 0.40, 'sine');
+    tone(698,  0.44, 0.38, 0.10, 'triangle');
   }
 }
 
