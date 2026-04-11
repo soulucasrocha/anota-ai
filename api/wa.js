@@ -70,16 +70,32 @@ export default async function handler(req, res) {
       const { phone, message } = req.body || {};
       if (!phone || !message) return res.status(400).json({ error: 'missing phone or message' });
       if (!id) return res.status(400).json({ error: 'missing account id' });
-      const url = backendUrl(`/whatsapp/${id}/send`);
-      console.log('[wa/send] url:', url, 'phone:', phone);
-      const r = await fetch(url, {
-        method: 'POST',
-        headers: hdrs({ 'Content-Type': 'application/json' }),
-        body: JSON.stringify({ phone, message }),
-      });
-      let body; try { body = await r.json(); } catch { body = {}; }
-      console.log('[wa/send] status:', r.status, 'body:', JSON.stringify(body));
-      return res.status(r.status).json(body);
+
+      // Try multiple endpoint/payload variants (discover correct one)
+      const candidates = [
+        { url: backendUrl(`/whatsapp/${id}/send-message`), body: { phone, message } },
+        { url: backendUrl(`/whatsapp/${id}/send-message`), body: { to: phone, text: message } },
+        { url: backendUrl(`/whatsapp/${id}/send-text`),    body: { phone, message } },
+        { url: backendUrl(`/whatsapp/${id}/message`),      body: { phone, message } },
+        { url: backendUrl(`/whatsapp/${id}/send`),         body: { phone, message } },
+        { url: backendUrl(`/send-message`),                body: { id, phone, message } },
+        { url: backendUrl(`/send`),                        body: { id, phone, message } },
+      ];
+
+      for (const c of candidates) {
+        console.log('[wa/send] trying:', c.url);
+        const r = await fetch(c.url, {
+          method: 'POST',
+          headers: hdrs({ 'Content-Type': 'application/json' }),
+          body: JSON.stringify(c.body),
+        });
+        let body; try { body = await r.json(); } catch { body = {}; }
+        console.log('[wa/send] status:', r.status, 'body:', JSON.stringify(body).slice(0, 200));
+        if (r.status !== 404) {
+          return res.status(r.status).json({ ...body, _endpoint: c.url.replace(WA_URL, '') });
+        }
+      }
+      return res.status(404).json({ error: 'No send endpoint found on backend', tried: candidates.map(c => c.url.replace(WA_URL, '')) });
     }
 
     // POST /api/wa?action=pairing&id=xxx
