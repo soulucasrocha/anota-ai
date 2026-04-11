@@ -108,6 +108,19 @@ export default async function handler(req, res) {
       return res.status(r.status).json(await r.json());
     }
 
+    // GET /api/wa?action=probe — discover backend routes
+    if (action === 'probe' && method === 'GET') {
+      const results = {};
+      for (const path of ['/', '/api', '/routes', '/health', '/docs', '/whatsapp']) {
+        try {
+          const r = await fetch(backendUrl(path), { headers: hdrs() });
+          let body; try { body = await r.text(); } catch { body = ''; }
+          results[path] = { status: r.status, body: body.slice(0, 300) };
+        } catch(e) { results[path] = { error: e.message }; }
+      }
+      return res.status(200).json(results);
+    }
+
     res.status(400).json({ error: 'Action inválida' });
   } catch (e) {
     res.status(502).json({ error: 'Backend indisponível', detail: e.message });
