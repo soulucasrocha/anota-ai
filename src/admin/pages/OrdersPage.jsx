@@ -196,6 +196,23 @@ function OrderCard({ order, token, storeId, onMoved, onFinalized, col, autoPrint
   );
 }
 
+// ── Sound system ──────────────────────────────────────────────────────────────
+function buildDefaultChime(ctx) {
+  // 3-tone chime: pleasant alert sound
+  [[880, 0], [1100, 0.18], [1320, 0.34]].forEach(([freq, delay]) => {
+    const osc  = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.connect(gain); gain.connect(ctx.destination);
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(freq, ctx.currentTime + delay);
+    gain.gain.setValueAtTime(0, ctx.currentTime + delay);
+    gain.gain.linearRampToValueAtTime(0.45, ctx.currentTime + delay + 0.04);
+    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + delay + 0.35);
+    osc.start(ctx.currentTime + delay);
+    osc.stop(ctx.currentTime + delay + 0.36);
+  });
+}
+
 export default function OrdersPage({ token, storeId }) {
   const [orders, setOrders]           = useState([]);
   const [loading, setLoading]         = useState(true);
@@ -206,6 +223,83 @@ export default function OrdersPage({ token, storeId }) {
   useEffect(() => { autoAcceptRef.current = autoAccept; }, [autoAccept]);
   const autoPrintRef = useRef(autoPrint);
   useEffect(() => { autoPrintRef.current = autoPrint; }, [autoPrint]);
+
+  // Sound state
+  const [soundType,    setSoundType]    = useState(() => localStorage.getItem('order_sound_type') || 'default');
+  const [soundPanel,   setSoundPanel]   = useState(false);
+  const [customLabel,  setCustomLabel]  = useState(() => localStorage.getItem('order_sound_label') || '');
+  const audioCtxRef    = useRef(null);
+  const customBufRef   = useRef(null);   // decoded AudioBuffer for custom sound
+  const knownIdsRef    = useRef(null);   // Set<string> of order IDs seen so far
+  const soundTypeRef   = useRef(soundType);
+  useEffect(() => { soundTypeRef.current = soundType; }, [soundType]);
+
+  // Unlock AudioContext on first user interaction
+  function getAudioCtx() {
+    if (!audioCtxRef.current) audioCtxRef.current = new (window.AudioContext || window.webkitAudioContext)();
+    if (audioCtxRef.current.state === 'suspended') audioCtxRef.current.resume();
+    return audioCtxRef.current;
+  }
+  useEffect(() => {
+    const unlock = () => getAudioCtx();
+    document.addEventListener('click', unlock, { once: true });
+    return () => document.removeEventListener('click', unlock);
+  }, []);
+
+  // Keep AudioContext running even in background tabs
+  useEffect(() => {
+    const handler = () => { if (audioCtxRef.current?.state === 'suspended') audioCtxRef.current.resume(); };
+    document.addEventListener('visibilitychange', handler);
+    return () => document.removeEventListener('visibilitychange', handler);
+  }, []);
+
+  // Load custom sound from localStorage into AudioBuffer
+  useEffect(() => {
+    const b64 = localStorage.getItem('order_sound_b64');
+    if (!b64) return;
+    const ctx = getAudioCtx();
+    const bin = atob(b64.split(',')[1] || b64);
+    const arr = new Uint8Array(bin.length);
+    for (let i = 0; i < bin.length; i++) arr[i] = bin.charCodeAt(i);
+    ctx.decodeAudioData(arr.buffer).then(buf => { customBufRef.current = buf; }).catch(() => {});
+  }, []);
+
+  function playSound() {
+    const type = soundTypeRef.current;
+    if (type === 'off') return;
+    try {
+      const ctx = getAudioCtx();
+      if (type === 'custom' && customBufRef.current) {
+        const src = ctx.createBufferSource();
+        src.buffer = customBufRef.current;
+        src.connect(ctx.destination);
+        src.start();
+      } else {
+        buildDefaultChime(ctx);
+      }
+    } catch {}
+  }
+
+  function handleSoundUpload(e) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      const b64 = ev.target.result;
+      localStorage.setItem('order_sound_b64', b64);
+      localStorage.setItem('order_sound_label', file.name);
+      setCustomLabel(file.name);
+      // Decode into buffer immediately
+      const ctx = getAudioCtx();
+      const bin = atob(b64.split(',')[1]);
+      const arr = new Uint8Array(bin.length);
+      for (let i = 0; i < bin.length; i++) arr[i] = bin.charCodeAt(i);
+      ctx.decodeAudioData(arr.buffer).then(buf => { customBufRef.current = buf; }).catch(() => {});
+      setSoundType('custom');
+      localStorage.setItem('order_sound_type', 'custom');
+    };
+    reader.readAsDataURL(file);
+  }
 
   // Fetch delivery time
   useEffect(() => {
@@ -239,6 +333,24 @@ export default function OrdersPage({ token, storeId }) {
           try { return typeof x === 'string' ? JSON.parse(x) : x; } catch { return null; }
         }).filter(Boolean);
 
+        // Detect new orders and play sound
+        const pendingIds = parsed
+          .filter(o => (o.kanban_status || o.kanbanStatus || 'pending') === 'pending')
+          .map(o => String(o.id));
+        if (knownIdsRef.current === null) {
+          // First load — just record existing IDs, don't play sound
+          knownIdsRef.current = new Set(pendingIds);
+        } else {
+          const newOnes = pendingIds.filter(id => !knownIdsRef.current.has(id));
+          if (newOnes.length > 0) {
+            playSound();
+            newOnes.forEach(id => knownIdsRef.current.add(id));
+          }
+          // Clean up IDs that are no longer pending
+          const allCurrentIds = new Set(parsed.map(o => String(o.id)));
+          knownIdsRef.current.forEach(id => { if (!allCurrentIds.has(id)) knownIdsRef.current.delete(id); });
+        }
+
         // Auto-accept: move all pending → preparing automatically
         if (autoAcceptRef.current) {
           const pending = parsed.filter(o => (o.kanban_status || o.kanbanStatus || 'pending') === 'pending');
@@ -260,11 +372,11 @@ export default function OrdersPage({ token, storeId }) {
         setLoading(false);
       })
       .catch(() => setLoading(false));
-  }, [token, storeId, acceptOrder]);
+  }, [token, storeId, acceptOrder]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     fetchOrders();
-    const t = setInterval(fetchOrders, 30000);
+    const t = setInterval(fetchOrders, 8000);
     return () => clearInterval(t);
   }, [fetchOrders]);
 
@@ -285,18 +397,66 @@ export default function OrdersPage({ token, storeId }) {
 
   return (
     <>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: soundPanel ? 8 : 20 }}>
         <div>
           <h3 style={{ fontSize: 16, color: '#1e2740', margin: 0 }}>
             🧾 Pedidos em andamento: <strong style={{ color: '#e53935' }}>{total}</strong>
           </h3>
           <p style={{ fontSize: 12, color: '#aaa', marginTop: 4 }}>
-            Atualiza a cada 30s automaticamente
+            Atualiza a cada 8s automaticamente
             {deliveryMinutes > 0 && <span style={{ marginLeft: 8 }}>· ⏱️ Entrega estimada: {deliveryMinutes}min</span>}
           </p>
         </div>
-        <button className="adm-btn ghost" onClick={fetchOrders} style={{ fontSize: 13 }}>🔄 Atualizar</button>
+        <div style={{ display: 'flex', gap: 8 }}>
+          <button
+            className={`adm-btn${soundPanel ? ' primary' : ' ghost'}`}
+            style={{ fontSize: 13 }}
+            onClick={() => setSoundPanel(p => !p)}
+          >
+            🔔 Som: {soundType === 'off' ? 'OFF' : soundType === 'custom' ? 'Custom' : 'Padrão'}
+          </button>
+          <button className="adm-btn ghost" onClick={fetchOrders} style={{ fontSize: 13 }}>🔄 Atualizar</button>
+        </div>
       </div>
+
+      {soundPanel && (
+        <div style={{ background: '#f9fafb', border: '1px solid #e5e7eb', borderRadius: 12, padding: '14px 16px', marginBottom: 20 }}>
+          <p style={{ margin: '0 0 10px', fontSize: 13, fontWeight: 700, color: '#374151' }}>🔔 Notificação sonora de novos pedidos</p>
+          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 12 }}>
+            {[['off','🔕 Desligado'],['default','🎵 Padrão'],['custom','🎧 Personalizado']].map(([val, lbl]) => (
+              <button
+                key={val}
+                className={`adm-btn${soundType === val ? ' primary' : ' ghost'}`}
+                style={{ fontSize: 12, padding: '6px 14px' }}
+                onClick={() => { setSoundType(val); localStorage.setItem('order_sound_type', val); }}
+              >
+                {lbl}
+              </button>
+            ))}
+            <button
+              className="adm-btn ghost"
+              style={{ fontSize: 12, padding: '6px 14px' }}
+              onClick={() => { playSound(); }}
+            >
+              ▶️ Testar
+            </button>
+          </div>
+          {soundType === 'custom' && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+              <label style={{ fontSize: 12, color: '#6b7280' }}>
+                {customLabel ? `📂 ${customLabel}` : 'Nenhum arquivo'}
+              </label>
+              <label className="adm-btn ghost" style={{ fontSize: 12, padding: '5px 12px', cursor: 'pointer' }}>
+                📁 Escolher arquivo
+                <input type="file" accept="audio/*" style={{ display: 'none' }} onChange={handleSoundUpload} />
+              </label>
+            </div>
+          )}
+          <p style={{ margin: '10px 0 0', fontSize: 11, color: '#9ca3af' }}>
+            O som toca mesmo se a aba estiver em segundo plano. Clique na página pelo menos uma vez para ativar o áudio.
+          </p>
+        </div>
+      )}
 
       <div className="kanban-board">
         {COLUMNS.map(col => {
