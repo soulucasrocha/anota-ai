@@ -218,20 +218,52 @@ function OrderCard({ order, token, storeId, onMoved, onFinalized, col, autoPrint
 }
 
 // ── Sound system ──────────────────────────────────────────────────────────────
-function buildDefaultChime(ctx) {
-  // 3-tone chime: pleasant alert sound
-  [[880, 0], [1100, 0.18], [1320, 0.34]].forEach(([freq, delay]) => {
-    const osc  = ctx.createOscillator();
-    const gain = ctx.createGain();
-    osc.connect(gain); gain.connect(ctx.destination);
-    osc.type = 'sine';
-    osc.frequency.setValueAtTime(freq, ctx.currentTime + delay);
-    gain.gain.setValueAtTime(0, ctx.currentTime + delay);
-    gain.gain.linearRampToValueAtTime(0.45, ctx.currentTime + delay + 0.04);
-    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + delay + 0.35);
-    osc.start(ctx.currentTime + delay);
-    osc.stop(ctx.currentTime + delay + 0.36);
-  });
+const SOUND_PRESETS = [
+  { key: 'preset1', label: '🎵 Sino de balcão',   desc: 'Ding! – campainha de cozinha' },
+  { key: 'preset2', label: '🔔 Carrilhão',         desc: '3 tons suaves ascendentes'   },
+  { key: 'preset3', label: '⏰ Timer de cozinha',  desc: 'Bip-bip rápido urgente'      },
+  { key: 'preset4', label: '🎶 Ding-Dong',         desc: 'Dois tons de interfone'      },
+  { key: 'preset5', label: '🚨 Alerta',            desc: 'Sinal de atenção pulsante'   },
+];
+
+function playPreset(ctx, key) {
+  const t = ctx.currentTime;
+  function tone(freq, start, dur, vol = 0.5, type = 'sine') {
+    const osc = ctx.createOscillator();
+    const g   = ctx.createGain();
+    osc.connect(g); g.connect(ctx.destination);
+    osc.type = type;
+    osc.frequency.setValueAtTime(freq, t + start);
+    g.gain.setValueAtTime(0, t + start);
+    g.gain.linearRampToValueAtTime(vol, t + start + 0.02);
+    g.gain.exponentialRampToValueAtTime(0.001, t + start + dur);
+    osc.start(t + start);
+    osc.stop(t + start + dur + 0.01);
+  }
+  if (key === 'preset1') {
+    // Sino de balcão: single high clear bell strike
+    tone(1760, 0,    0.6, 0.55, 'sine');
+    tone(1760, 0,    0.6, 0.2,  'triangle');
+    tone(880,  0.01, 0.4, 0.15, 'sine');
+  } else if (key === 'preset2') {
+    // Carrilhão: 3-tone ascending chime
+    tone(880,  0,    0.35, 0.45);
+    tone(1100, 0.18, 0.35, 0.45);
+    tone(1320, 0.34, 0.4,  0.45);
+  } else if (key === 'preset3') {
+    // Timer de cozinha: rapid beep-beep-beep
+    [0, 0.18, 0.36, 0.54].forEach(s => tone(1480, s, 0.12, 0.5, 'square'));
+  } else if (key === 'preset4') {
+    // Ding-Dong: two-tone doorbell
+    tone(1046, 0,   0.45, 0.5);
+    tone(784,  0.3, 0.55, 0.4);
+  } else if (key === 'preset5') {
+    // Alerta pulsante: 2 blasts
+    [0, 0.22].forEach(s => {
+      tone(880,  s,        0.18, 0.5, 'sawtooth');
+      tone(1100, s + 0.09, 0.12, 0.4, 'sawtooth');
+    });
+  }
 }
 
 export default function OrdersPage({ token, storeId }) {
@@ -246,7 +278,10 @@ export default function OrdersPage({ token, storeId }) {
   useEffect(() => { autoPrintRef.current = autoPrint; }, [autoPrint]);
 
   // Sound state
-  const [soundType,    setSoundType]    = useState(() => localStorage.getItem('order_sound_type') || 'default');
+  const [soundType,    setSoundType]    = useState(() => {
+    const s = localStorage.getItem('order_sound_type') || 'preset2';
+    return s === 'default' ? 'preset2' : s; // migrate old value
+  });
   const [soundPanel,   setSoundPanel]   = useState(false);
   const [customLabel,  setCustomLabel]  = useState(() => localStorage.getItem('order_sound_label') || '');
   const audioCtxRef    = useRef(null);
@@ -295,8 +330,10 @@ export default function OrdersPage({ token, storeId }) {
         src.buffer = customBufRef.current;
         src.connect(ctx.destination);
         src.start();
+      } else if (SOUND_PRESETS.find(p => p.key === type)) {
+        playPreset(ctx, type);
       } else {
-        buildDefaultChime(ctx);
+        playPreset(ctx, 'preset2'); // fallback to carrilhão
       }
     } catch {}
   }
@@ -442,7 +479,7 @@ export default function OrdersPage({ token, storeId }) {
             style={{ fontSize: 13 }}
             onClick={() => setSoundPanel(p => !p)}
           >
-            🔔 Som: {soundType === 'off' ? 'OFF' : soundType === 'custom' ? 'Custom' : 'Padrão'}
+            🔔 Som: {soundType === 'off' ? 'OFF' : soundType === 'custom' ? 'Custom' : (SOUND_PRESETS.find(p => p.key === soundType)?.label || 'Padrão')}
           </button>
           <button className="adm-btn ghost" onClick={fetchOrders} style={{ fontSize: 13 }}>🔄 Atualizar</button>
         </div>
@@ -451,29 +488,53 @@ export default function OrdersPage({ token, storeId }) {
       {soundPanel && (
         <div style={{ background: '#f9fafb', border: '1px solid #e5e7eb', borderRadius: 12, padding: '14px 16px', marginBottom: 20 }}>
           <p style={{ margin: '0 0 10px', fontSize: 13, fontWeight: 700, color: '#374151' }}>🔔 Notificação sonora de novos pedidos</p>
-          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 12 }}>
-            {[['off','🔕 Desligado'],['default','🎵 Padrão'],['custom','🎧 Personalizado']].map(([val, lbl]) => (
-              <button
-                key={val}
-                className={`adm-btn${soundType === val ? ' primary' : ' ghost'}`}
-                style={{ fontSize: 12, padding: '6px 14px' }}
-                onClick={() => { setSoundType(val); localStorage.setItem('order_sound_type', val); }}
-              >
-                {lbl}
-              </button>
-            ))}
+
+          {/* Off / Custom */}
+          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 10 }}>
             <button
-              className="adm-btn ghost"
+              className={`adm-btn${soundType === 'off' ? ' primary' : ' ghost'}`}
+              style={{ fontSize: 12, padding: '6px 14px', background: soundType === 'off' ? '#6b7280' : undefined }}
+              onClick={() => { setSoundType('off'); localStorage.setItem('order_sound_type', 'off'); }}
+            >🔕 Desligado</button>
+            <button
+              className={`adm-btn${soundType === 'custom' ? ' primary' : ' ghost'}`}
               style={{ fontSize: 12, padding: '6px 14px' }}
-              onClick={() => { playSound(); }}
-            >
-              ▶️ Testar
-            </button>
+              onClick={() => { setSoundType('custom'); localStorage.setItem('order_sound_type', 'custom'); }}
+            >🎧 Personalizado</button>
           </div>
+
+          {/* 5 presets */}
+          <p style={{ margin: '0 0 6px', fontSize: 11, fontWeight: 600, color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Sons de cozinha</p>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(200px,1fr))', gap: 8, marginBottom: 12 }}>
+            {SOUND_PRESETS.map(p => (
+              <div
+                key={p.key}
+                onClick={() => { setSoundType(p.key); localStorage.setItem('order_sound_type', p.key); }}
+                style={{
+                  padding: '10px 12px', borderRadius: 10, cursor: 'pointer',
+                  border: `2px solid ${soundType === p.key ? '#e53935' : '#e5e7eb'}`,
+                  background: soundType === p.key ? '#fff5f5' : '#fff',
+                  display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8,
+                }}
+              >
+                <div>
+                  <p style={{ margin: 0, fontSize: 13, fontWeight: 700, color: '#1e2740' }}>{p.label}</p>
+                  <p style={{ margin: 0, fontSize: 11, color: '#9ca3af' }}>{p.desc}</p>
+                </div>
+                <button
+                  className="adm-btn ghost"
+                  style={{ fontSize: 11, padding: '3px 8px', flexShrink: 0 }}
+                  onClick={e => { e.stopPropagation(); const ctx = (audioCtxRef.current || (audioCtxRef.current = new (window.AudioContext || window.webkitAudioContext)())); if (ctx.state === 'suspended') ctx.resume(); playPreset(ctx, p.key); }}
+                >▶</button>
+              </div>
+            ))}
+          </div>
+
+          {/* Custom upload */}
           {soundType === 'custom' && (
-            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8 }}>
               <label style={{ fontSize: 12, color: '#6b7280' }}>
-                {customLabel ? `📂 ${customLabel}` : 'Nenhum arquivo'}
+                {customLabel ? `📂 ${customLabel}` : 'Nenhum arquivo selecionado'}
               </label>
               <label className="adm-btn ghost" style={{ fontSize: 12, padding: '5px 12px', cursor: 'pointer' }}>
                 📁 Escolher arquivo
@@ -481,6 +542,13 @@ export default function OrdersPage({ token, storeId }) {
               </label>
             </div>
           )}
+
+          {soundType !== 'off' && (
+            <button className="adm-btn ghost" style={{ fontSize: 12, padding: '6px 14px' }} onClick={playSound}>
+              ▶️ Testar som selecionado
+            </button>
+          )}
+
           <p style={{ margin: '10px 0 0', fontSize: 11, color: '#9ca3af' }}>
             O som toca mesmo se a aba estiver em segundo plano. Clique na página pelo menos uma vez para ativar o áudio.
           </p>
