@@ -36,8 +36,11 @@ export default function FinalizeScreen({
   // Delivery zone state
   const [zoneChecking, setZoneChecking]   = useState(false);
   const [matchedZone,  setMatchedZone]    = useState(null);  // zone obj or null
-  const [outsideArea,  setOutsideArea]    = useState(false); // true only when zones configured + no match
+  const [outsideArea,  setOutsideArea]    = useState(false); // address found but outside zones
+  const [geoFailed,    setGeoFailed]      = useState(false); // address not found in maps
   const [storePos,     setStorePos]       = useState(null);
+
+  const DEFAULT_FEE = 500; // R$5,00 when address unidentified or outside area
 
   const debouncedAddress = useDebounce(address, 800);
   const inputRef = useRef(null);
@@ -94,8 +97,7 @@ export default function FinalizeScreen({
   // Check delivery zone when address changes
   useEffect(() => {
     if (!active || !zonesConfigured || debouncedAddress.length < 6) {
-      setMatchedZone(null);
-      setOutsideArea(false);
+      setMatchedZone(null); setOutsideArea(false); setGeoFailed(false);
       onDeliveryFeeChange?.(0);
       return;
     }
@@ -103,16 +105,29 @@ export default function FinalizeScreen({
     setZoneChecking(true);
     geocodeAddress(debouncedAddress).then(async customerPos => {
       if (cancelled) return;
+      if (!customerPos) {
+        // Address not found in maps — apply default fee
+        setMatchedZone(null); setOutsideArea(false); setGeoFailed(true);
+        onDeliveryFeeChange?.(DEFAULT_FEE);
+        setZoneChecking(false);
+        return;
+      }
       let sPos = storePos;
       if (!sPos && deliveryAddress) sPos = await geocodeAddress(deliveryAddress);
       if (cancelled) return;
       const zone = findZone(sPos, customerPos, deliveryZones);
       setMatchedZone(zone);
+      setGeoFailed(false);
       setOutsideArea(!zone);
-      onDeliveryFeeChange?.(zone?.fee || 0);
+      onDeliveryFeeChange?.(zone?.fee ?? DEFAULT_FEE);
       setZoneChecking(false);
     }).catch(() => {
-      if (!cancelled) { setZoneChecking(false); }
+      if (!cancelled) {
+        // Network error — apply default fee and allow order
+        setMatchedZone(null); setOutsideArea(false); setGeoFailed(true);
+        onDeliveryFeeChange?.(DEFAULT_FEE);
+        setZoneChecking(false);
+      }
     });
     return () => { cancelled = true; };
   }, [debouncedAddress, active, zonesConfigured]);
@@ -128,7 +143,7 @@ export default function FinalizeScreen({
   const hasEnabledPay = Object.keys(PM_INFO).some(k => payMethods[k]);
   const isPayDisabled = !selectedPay || !payMethods[selectedPay];
 
-  const deliveryFee = matchedZone?.fee || 0;
+  const deliveryFee = matchedZone ? (matchedZone.fee ?? 0) : (geoFailed || outsideArea ? DEFAULT_FEE : 0);
   const total       = getCartTotal();
   const grandTotal  = total + deliveryFee;
 
@@ -212,14 +227,6 @@ export default function FinalizeScreen({
                     </p>
                   </div>
                 </div>
-              ) : outsideArea ? (
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 14px', background: '#fffbeb', borderRadius: 10, border: '1px solid #fcd34d' }}>
-                  <span style={{ fontSize: 16 }}>⚠️</span>
-                  <div>
-                    <p style={{ margin: 0, fontSize: 13, fontWeight: 700, color: '#92400e' }}>Endereço fora da área configurada</p>
-                    <p style={{ margin: 0, fontSize: 12, color: '#b45309' }}>A taxa de entrega será combinada com o entregador.</p>
-                  </div>
-                </div>
               ) : null}
             </div>
           )}
@@ -233,7 +240,7 @@ export default function FinalizeScreen({
               <span>Subtotal</span><span>{fmtPrice(total)}</span>
             </div>
             <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, color: '#6b7280', marginBottom: 8 }}>
-              <span>Taxa de entrega ({matchedZone?.name})</span>
+              <span>Taxa de entrega {matchedZone?.name ? `(${matchedZone.name})` : '(padrão)'}</span>
               <span style={{ color: '#e53935', fontWeight: 600 }}>+ {fmtPrice(deliveryFee)}</span>
             </div>
             <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 15, fontWeight: 800, color: '#1e2740', borderTop: '1px solid #f3f4f6', paddingTop: 8 }}>

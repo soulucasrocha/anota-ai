@@ -109,6 +109,28 @@ export default async function handler(req, res) {
       return res.status(200).json(results);
     }
 
+    // POST /api/wa?action=ifood-test-login — testa login iFood
+    if (action === 'ifood-test-login' && method === 'POST') {
+      const r = await fetch(backendUrl('/ifood/test-login'), {
+        method: 'POST',
+        headers: hdrs({ 'Content-Type': 'application/json' }),
+        body: JSON.stringify(req.body),
+      });
+      let body; try { body = await r.json(); } catch { body = {}; }
+      return res.status(r.status).json(body);
+    }
+
+    // POST /api/wa?action=ifood-request-delivery — aciona entregador iFood
+    if (action === 'ifood-request-delivery' && method === 'POST') {
+      const r = await fetch(backendUrl('/ifood/request-delivery'), {
+        method: 'POST',
+        headers: hdrs({ 'Content-Type': 'application/json' }),
+        body: JSON.stringify(req.body),
+      });
+      let body; try { body = await r.json(); } catch { body = {}; }
+      return res.status(r.status).json(body);
+    }
+
     res.status(400).json({ error: 'Action inválida' });
   } catch (e) {
     res.status(502).json({ error: 'Backend indisponível', detail: e.message });

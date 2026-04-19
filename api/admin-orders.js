@@ -13,9 +13,15 @@ export default async function handler(req, res) {
   }
 
   if (req.method === 'PATCH') {
-    const { id, kanbanStatus } = req.body || {};
+    const { id, kanbanStatus, cancelReason } = req.body || {};
     if (!id || !kanbanStatus) return res.status(400).json({ error: 'missing id or kanbanStatus' });
-    await sb().from('orders').update({ kanban_status: kanbanStatus, updated_at: new Date().toISOString() }).eq('id', String(id)).eq('store_id', storeId);
+    const update = { kanban_status: kanbanStatus, updated_at: new Date().toISOString() };
+    if (kanbanStatus === 'cancelled') {
+      update.finalized = true;
+      update.finalized_at = new Date().toISOString();
+      if (cancelReason) update.cancel_reason = cancelReason;
+    }
+    await sb().from('orders').update(update).eq('id', String(id)).eq('store_id', storeId);
     return res.status(200).json({ ok: true });
   }
 

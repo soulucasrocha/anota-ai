@@ -93,7 +93,7 @@ function loadPending() {
 }
 function clearPending() { try { localStorage.removeItem(LS_PENDING_KEY); } catch {} }
 
-export default function PixScreen({ active, amount, cart, customer, deliveryAddress, storeId, onBack, onPaid, showToast }) {
+export default function PixScreen({ active, amount, deliveryFee, cart, customer, deliveryAddress, storeId, onBack, onPaid, showToast }) {
   const [pixKey, setPixKey]               = useState('Gerando PIX...');
   const [qrCode, setQrCode]               = useState(null);
   const [ready, setReady]                 = useState(false);
@@ -129,7 +129,7 @@ export default function PixScreen({ active, amount, cart, customer, deliveryAddr
     clearInterval(statusPollRef.current);
     statusPollRef.current = setInterval(async () => {
       try {
-        const res = await fetch(`/api/order-status?pixId=${pixId}`);
+        const res = await fetch(`/api/order-save?pixId=${pixId}`);
         if (!res.ok) return;
         const data = await res.json();
         if (data.status) setOrderStatus(data.status);
@@ -244,7 +244,7 @@ export default function PixScreen({ active, amount, cart, customer, deliveryAddr
       fetch('/api/order-save?type=transaction', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ pixId: data.id, amount: amountRef.current, customer: cust, items, address: addressRef.current, storeId: storeId || undefined, hashtag: sessionStorage.getItem('campaign_ref') || null }),
+        body: JSON.stringify({ pixId: data.id, amount: amountRef.current, delivery_fee: deliveryFee || 0, customer: cust, items, address: addressRef.current, storeId: storeId || undefined, hashtag: sessionStorage.getItem('campaign_ref') || null }),
       }).catch(() => {});
       const customerData = cust
         ? { name: cust.name || '', email: '', phone: cust.phone || '', document: '' }
@@ -277,7 +277,7 @@ export default function PixScreen({ active, amount, cart, customer, deliveryAddr
         setOrderStatus('pending');
         startStatusPolling(saved.pixId);
         // Busca status + detalhes imediatos (inclui address/customerName/total)
-        fetch(`/api/order-status?pixId=${saved.pixId}`)
+        fetch(`/api/order-save?pixId=${saved.pixId}`)
           .then(r => r.json())
           .then(d => {
             if (d.status) setOrderStatus(d.status);

@@ -78,7 +78,7 @@ export default function DeliveryWaitingScreen({ active, orderId, amount, cart, c
     clearInterval(pollRef.current);
     pollRef.current = setInterval(async () => {
       try {
-        const res = await fetch(`/api/order-status?pixId=${id}`);
+        const res = await fetch(`/api/order-save?pixId=${id}`);
         if (!res.ok) return;
         const data = await res.json();
         if (data.status) setOrderStatus(data.status);
@@ -97,7 +97,7 @@ export default function DeliveryWaitingScreen({ active, orderId, amount, cart, c
       if (saved?.amount) amountRef.current = saved.amount;
       setOrderStatus('pending');
       // Immediate fetch
-      fetch(`/api/order-status?pixId=${oid}`)
+      fetch(`/api/order-save?pixId=${oid}`)
         .then(r => r.json())
         .then(d => { if (d.status) setOrderStatus(d.status); })
         .catch(() => {});

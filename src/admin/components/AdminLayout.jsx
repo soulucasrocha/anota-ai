@@ -8,6 +8,8 @@ const NAV = [
   { key: 'campaigns',    icon: '🎨', label: 'Criativo'             },
   { key: 'integrations', icon: '🔌', label: 'Integrações'          },
   { key: 'robot',        icon: '🤖', label: 'Robô'                  },
+  { key: 'deliveries',   icon: '🛵', label: 'Entregas'               },
+  { key: 'drivers',      icon: '🪪', label: 'Entregadores'           },
   { key: 'payments',     icon: '💲', label: 'Formas de Pagamento'  },
   { key: 'profile',      icon: '🏪', label: 'Perfil da Loja'       },
   { key: 'delivery',     icon: '🗺️', label: 'Área de Entrega'      },
@@ -22,7 +24,7 @@ export default function AdminLayout({ page, setPage, onLogout, children, stores,
   const titles = {
     dashboard: 'Dashboard', products: 'Cardápio',
     orders: 'Pedidos (Kanban)', transactions: 'Transações',
-    campaigns: 'Criativo', integrations: 'Integrações', robot: 'Robô WhatsApp',
+    campaigns: 'Criativo', integrations: 'Integrações', robot: 'Robô WhatsApp', deliveries: 'Entregas', drivers: 'Entregadores',
     payments: 'Formas de Pagamento', profile: 'Perfil da Loja',
     delivery: 'Área de Entrega', printer: 'Impressora',
   };

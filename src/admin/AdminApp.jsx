@@ -13,6 +13,8 @@ import DeliveryAreaPage   from './pages/DeliveryAreaPage';
 import CampaignsPage      from './pages/CampaignsPage';
 import IntegrationsPage   from './pages/IntegrationsPage';
 import RobotPage          from './pages/RobotPage';
+import DeliveriesPage     from './pages/DeliveriesPage';
+import DriversPage        from './pages/DriversPage';
 
 export default function AdminApp() {
   const [token,    setToken]    = useState(() => localStorage.getItem('adm_token') || null);
@@ -76,6 +78,8 @@ export default function AdminApp() {
     campaigns:    <CampaignsPage     token={token} storeId={storeId} store={currentStore} />,
     integrations: <IntegrationsPage  token={token} storeId={storeId} />,
     robot:        <RobotPage         token={token} storeId={storeId} />,
+    deliveries:   <DeliveriesPage    token={token} storeId={storeId} />,
+    drivers:      <DriversPage       token={token} storeId={storeId} />,
   };
 
   return (

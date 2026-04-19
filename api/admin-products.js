@@ -50,6 +50,20 @@ export default async function handler(req, res) {
     }
   }
 
+  // ── Delivery integrations ─────────────────────────────────────────────
+  if (req.query.type === 'delivery-integrations') {
+    if (!storeId) return res.status(400).json({ error: 'missing storeId' });
+    if (req.method === 'GET') {
+      const { data } = await sb().from('store_settings').select('delivery_integrations').eq('store_id', storeId).maybeSingle();
+      return res.status(200).json({ integrations: data?.delivery_integrations || {} });
+    }
+    if (req.method === 'PATCH') {
+      await sb().from('store_settings').upsert({ store_id: storeId, delivery_integrations: req.body, updated_at: new Date().toISOString() }, { onConflict: 'store_id' });
+      return res.status(200).json({ ok: true });
+    }
+    return res.status(405).end();
+  }
+
   // ── Bot (WhatsApp robot) config ───────────────────────────────────────
   if (req.query.type === 'bot') {
     if (!storeId) return res.status(400).json({ error: 'missing storeId' });

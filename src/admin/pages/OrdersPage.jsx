@@ -82,9 +82,12 @@ function applyBotVars(template, order) {
   return template.replace(/\{\{nome\}\}/g, nome).replace(/\{\{pedido\}\}/g, pedido).replace(/\{\{total\}\}/g, total);
 }
 
-function OrderCard({ order, token, storeId, onMoved, onFinalized, col, autoPrint, deliveryMinutes, botConfig }) {
-  const [moving,    setMoving]    = useState(false);
-  const [finishing, setFinishing] = useState(false);
+function OrderCard({ order, token, storeId, onMoved, onFinalized, col, autoPrint, deliveryMinutes, botConfig, deliveryIntegrations, assignedDriver }) {
+  const [moving,       setMoving]       = useState(false);
+  const [finishing,    setFinishing]    = useState(false);
+  const [cancelOpen,   setCancelOpen]   = useState(false);
+  const [cancelReason, setCancelReason] = useState('');
+  const [cancelling,   setCancelling]   = useState(false);
 
   async function moveNext() {
     const nextStatus = NEXT[col];
@@ -98,6 +101,24 @@ function OrderCard({ order, token, storeId, onMoved, onFinalized, col, autoPrint
       });
       onMoved(order.id, nextStatus);
       if (nextStatus === 'preparing' && autoPrint) printOrder(order);
+
+      // iFood auto-delivery: trigger when moving to 'delivering' with autoEnabled
+      if (nextStatus === 'delivering' && deliveryIntegrations?.ifood?.connected && deliveryIntegrations?.ifood?.autoEnabled) {
+        const ifoodCfg = deliveryIntegrations.ifood;
+        fetch('/api/wa?action=ifood-request-delivery', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'x-admin-token': token },
+          body: JSON.stringify({
+            email:        ifoodCfg.email,
+            password:     ifoodCfg.password,
+            order:        { id: order.id, address: order.address, customer: order.customer, total: order.total },
+            storeAddress: '',
+          }),
+        })
+          .then(r => r.json())
+          .then(d => { if (d.ok) console.log('[iFood] Entregador solicitado!', d); else console.warn('[iFood] Falha:', d.error); })
+          .catch(() => {});
+      }
 
       // Send WA notification if bot enabled
       const bot = botConfig;
@@ -114,6 +135,20 @@ function OrderCard({ order, token, storeId, onMoved, onFinalized, col, autoPrint
       }
     } catch {}
     setMoving(false);
+  }
+
+  async function cancelOrder() {
+    setCancelling(true);
+    try {
+      await fetch('/api/admin-orders', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json', 'x-admin-token': token, 'x-store-id': storeId || '' },
+        body: JSON.stringify({ id: order.id, kanbanStatus: 'cancelled', cancelReason: cancelReason.trim() || null }),
+      });
+      onFinalized(order.id);
+    } catch {}
+    setCancelling(false);
+    setCancelOpen(false);
   }
 
   async function finalize() {
@@ -134,10 +169,51 @@ function OrderCard({ order, token, storeId, onMoved, onFinalized, col, autoPrint
   const showTimer = (col === 'preparing' || col === 'delivering') && deliveryMinutes > 0;
 
   return (
+    <>
+    {cancelOpen && (
+      <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.45)', zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
+        <div style={{ background: '#fff', borderRadius: 16, padding: 24, width: '100%', maxWidth: 400, boxShadow: '0 8px 32px rgba(0,0,0,0.18)' }}>
+          <h3 style={{ margin: '0 0 4px', fontSize: 16, color: '#1e2740' }}>Cancelar pedido #{String(order.id).slice(-6)}</h3>
+          <p style={{ margin: '0 0 14px', fontSize: 13, color: '#6b7280' }}>Cliente: {order.customer?.name || '—'}</p>
+          <label style={{ fontSize: 13, fontWeight: 600, color: '#374151', display: 'block', marginBottom: 6 }}>
+            Motivo do cancelamento <span style={{ fontWeight: 400, color: '#9ca3af' }}>(opcional)</span>
+          </label>
+          <textarea
+            rows={3}
+            placeholder="Ex: Cliente solicitou, item esgotado..."
+            value={cancelReason}
+            onChange={e => setCancelReason(e.target.value)}
+            style={{ width: '100%', padding: '10px 12px', borderRadius: 8, border: '1px solid #d1d5db', fontSize: 13, resize: 'vertical', boxSizing: 'border-box', fontFamily: 'inherit' }}
+          />
+          <div style={{ display: 'flex', gap: 10, marginTop: 16 }}>
+            <button
+              onClick={() => { setCancelOpen(false); setCancelReason(''); }}
+              style={{ flex: 1, padding: '10px', borderRadius: 8, border: '1px solid #d1d5db', background: '#fff', fontSize: 13, fontWeight: 600, cursor: 'pointer', color: '#374151' }}
+            >
+              Voltar
+            </button>
+            <button
+              onClick={cancelOrder}
+              disabled={cancelling}
+              style={{ flex: 1, padding: '10px', borderRadius: 8, border: 'none', background: '#dc2626', color: '#fff', fontSize: 13, fontWeight: 700, cursor: 'pointer' }}
+            >
+              {cancelling ? 'Cancelando...' : 'Confirmar cancelamento'}
+            </button>
+          </div>
+        </div>
+      </div>
+    )}
     <div className="kanban-card" style={{ borderTop: `3px solid ${colDef?.color}` }}>
       <div className="kanban-card-header">
         <span className="kanban-order-id">#{String(order.id).slice(-6)}</span>
-        <span className="kanban-order-time">{fmtTime(order.created_at || order.createdAt)}</span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <span className="kanban-order-time">{fmtTime(order.created_at || order.createdAt)}</span>
+          <button
+            onClick={() => setCancelOpen(true)}
+            title="Cancelar pedido"
+            style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#dc2626', fontSize: 16, lineHeight: 1, padding: '2px 4px', borderRadius: 4, display: 'flex', alignItems: 'center' }}
+          >✕</button>
+        </div>
       </div>
 
       <div className="kanban-customer">
@@ -157,6 +233,18 @@ function OrderCard({ order, token, storeId, onMoved, onFinalized, col, autoPrint
 
       {showTimer && (
         <OrderTimer createdAt={order.created_at || order.createdAt} deliveryMinutes={deliveryMinutes} />
+      )}
+
+      {assignedDriver && (
+        <div style={{
+          display: 'inline-flex', alignItems: 'center', gap: 5,
+          background: '#dbeafe', color: '#1e40af',
+          fontSize: 12, fontWeight: 700,
+          padding: '4px 10px', borderRadius: 99,
+          marginBottom: 6,
+        }}>
+          🛵 {assignedDriver}
+        </div>
       )}
 
       {order.address && (
@@ -201,6 +289,29 @@ function OrderCard({ order, token, storeId, onMoved, onFinalized, col, autoPrint
               {moving ? '...' : NEXT_LABEL[col]}
             </button>
           )}
+          {/* Delivery integration buttons — shown while order is in "delivering" */}
+          {col === 'delivering' && deliveryIntegrations && (() => {
+            const btns = [];
+            if (deliveryIntegrations.ifood?.connected) btns.push(
+              <a key="ifood"
+                href="https://portal.ifood.com.br/logistics"
+                target="_blank" rel="noreferrer"
+                className="kanban-move-btn"
+                style={{ background: '#ea1d2c', fontSize: 12, textDecoration: 'none', display: 'block', textAlign: 'center', padding: '8px 12px' }}>
+                🛵 Chamar iFood
+              </a>
+            );
+            if (deliveryIntegrations['99food']?.connected) btns.push(
+              <a key="99food"
+                href="https://empresas.99app.com"
+                target="_blank" rel="noreferrer"
+                className="kanban-move-btn"
+                style={{ background: '#f5a623', fontSize: 12, textDecoration: 'none', display: 'block', textAlign: 'center', padding: '8px 12px' }}>
+                🟡 Chamar 99
+              </a>
+            );
+            return btns.length > 0 ? btns : null;
+          })()}
           <button className="kanban-move-btn" onClick={() => printOrder(order)}
             style={{ background: '#374151', fontSize: 12 }}>
             🖨️ Imprimir pedido
@@ -214,6 +325,7 @@ function OrderCard({ order, token, storeId, onMoved, onFinalized, col, autoPrint
         </div>
       </div>
     </div>
+    </>
   );
 }
 
@@ -376,12 +488,41 @@ export default function OrdersPage({ token, storeId }) {
     reader.readAsDataURL(file);
   }
 
+  // Driver assignments: map of orderId → driverName
+  const [driverMap, setDriverMap] = useState({});
+
+  const fetchAssignments = useCallback(async () => {
+    if (!storeId) return;
+    try {
+      const r = await fetch(`/api/driver?scope=assignments&storeId=${storeId}`, {
+        headers: { 'x-admin-token': token, 'x-store-id': storeId },
+      });
+      const d = await r.json();
+      setDriverMap(d.map || {});
+    } catch {}
+  }, [token, storeId]);
+
+  // Fetch assignments in sync with orders (same 8s interval)
+  useEffect(() => {
+    fetchAssignments();
+    const t = setInterval(fetchAssignments, 8000);
+    return () => clearInterval(t);
+  }, [fetchAssignments]);
+
   // Bot config
   const [botConfig, setBotConfig] = useState(null);
   useEffect(() => {
     if (!storeId) return;
     fetch(`/api/admin-products?type=bot&storeId=${storeId}`, { headers: { 'x-admin-token': token } })
       .then(r => r.json()).then(d => setBotConfig(d.bot || null)).catch(() => {});
+  }, [token, storeId]);
+
+  // Delivery integrations
+  const [deliveryIntegrations, setDeliveryIntegrations] = useState(null);
+  useEffect(() => {
+    if (!storeId) return;
+    fetch(`/api/admin-products?type=delivery-integrations&storeId=${storeId}`, { headers: { 'x-admin-token': token } })
+      .then(r => r.json()).then(d => setDeliveryIntegrations(d.integrations || null)).catch(() => {});
   }, [token, storeId]);
 
   // Fetch delivery time
@@ -465,6 +606,8 @@ export default function OrdersPage({ token, storeId }) {
 
   function handleMoved(id, newStatus) {
     setOrders(prev => prev.map(o => String(o.id) === String(id) ? { ...o, kanban_status: newStatus, kanbanStatus: newStatus } : o));
+    // Refresh driver assignments immediately when order moves
+    fetchAssignments();
   }
 
   function handleFinalized(id) {
@@ -628,6 +771,8 @@ export default function OrdersPage({ token, storeId }) {
                       autoPrint={autoPrint}
                       deliveryMinutes={deliveryMinutes}
                       botConfig={botConfig}
+                      deliveryIntegrations={deliveryIntegrations}
+                      assignedDriver={driverMap[String(o.id)] || null}
                     />
                   ))
                 )}

@@ -294,11 +294,12 @@ export default function App() {
 
   // ── Delivery order handler ─────────────────────────────────────────────────
 
-  const handleDeliveryOrder = useCallback(async (method, changeFor) => {
+  const handleDeliveryOrder = useCallback(async (method, changeFor, fullAddress) => {
     const items = Object.values(cart).map(({ item, qty }) => ({ id: item.id, name: item.name, qty, price: item.price, note: item.cartNote || '' }));
     const orderId = `del-${Date.now()}`;
     const subtotal = getCartTotal();
     const total = subtotal + deliveryFee;
+    const addr = fullAddress || address;
     // Build change note if cash payment
     const changeNote = (method === 'cash' && changeFor && changeFor * 100 > total)
       ? `Troco para R$${changeFor.toFixed(2).replace('.',',')} (R$${((changeFor * 100 - total) / 100).toFixed(2).replace('.',',')} de troco)`
@@ -313,7 +314,7 @@ export default function App() {
           total,
           delivery_fee: deliveryFee,
           customer: { name: checkoutName, phone: checkoutPhone },
-          address,
+          address: addr,
           paymentMethod: method,
           deliveryPayment: true,
           storeId: storeId || undefined,
@@ -339,7 +340,7 @@ export default function App() {
     setDeliveryChangeNote(changeNote);
     setDeliveryChangeFor(changeFor || null);
     setScreen('delivery-waiting');
-  }, [cart, getCartTotal, checkoutName, checkoutPhone, address, storeId, setScreen]);
+  }, [cart, getCartTotal, checkoutName, checkoutPhone, address, deliveryFee, storeId, setScreen]);
 
   // ─────────────────────────────────────────────────────────────────────────
 
@@ -414,13 +415,14 @@ export default function App() {
         getCartTotal={getCartTotal}
         onBack={() => setScreen('checkout')}
         onAdvance={(method, changeFor, addrNumber) => {
-          if (addrNumber) setAddress(prev => prev + (prev ? `, nº ${addrNumber}` : addrNumber));
+          const fullAddress = addrNumber ? `${address}${address ? `, nº ${addrNumber}` : addrNumber}` : address;
+          if (addrNumber) setAddress(fullAddress);
           setPaymentMethod(method);
           const isOnline = method === 'pix_online' || method === 'card_online';
           if (isOnline) {
             setScreen('pix');
           } else {
-            handleDeliveryOrder(method, changeFor);
+            handleDeliveryOrder(method, changeFor, fullAddress);
           }
         }}
         geoData={geoData}
@@ -434,7 +436,8 @@ export default function App() {
 
       <PixScreen
         active={screen === 'pix'}
-        amount={getCartTotal()}
+        amount={getCartTotal() + deliveryFee}
+        deliveryFee={deliveryFee}
         cart={cart}
         customer={{ name: checkoutName, phone: checkoutPhone }}
         deliveryAddress={address}
