@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { fmtPrice } from '../../utils/helpers'
-import { searchAddress } from '../../utils/geo'
+import { searchAddress, getUserGeo } from '../../utils/geo'
 import { geocodeAddress, findZone } from '../../utils/deliveryZone'
 
 function useDebounce(value, delay) {
@@ -32,15 +32,17 @@ export default function FinalizeScreen({
   const [selectedPay, setSelectedPay] = useState(null);
   const [changeFor,   setChangeFor]   = useState('');
   const [addrNumber,  setAddrNumber]  = useState('');
+  const [city,        setCity]        = useState('');
+  const [gpsLoading,  setGpsLoading]  = useState(false);
 
   // Delivery zone state
   const [zoneChecking, setZoneChecking]   = useState(false);
-  const [matchedZone,  setMatchedZone]    = useState(null);  // zone obj or null
-  const [outsideArea,  setOutsideArea]    = useState(false); // address found but outside zones
-  const [geoFailed,    setGeoFailed]      = useState(false); // address not found in maps
+  const [matchedZone,  setMatchedZone]    = useState(null);
+  const [outsideArea,  setOutsideArea]    = useState(false);
+  const [geoFailed,    setGeoFailed]      = useState(false);
   const [storePos,     setStorePos]       = useState(null);
 
-  const DEFAULT_FEE = 500; // R$5,00 when address unidentified or outside area
+  const DEFAULT_FEE = 500;
 
   const debouncedAddress = useDebounce(address, 800);
   const inputRef = useRef(null);
@@ -88,11 +90,28 @@ export default function FinalizeScreen({
     return () => { cancelled = true; };
   }, [debouncedAddress, active]);
 
-  // Pre-fill from geolocation
+  // Pre-fill from geolocation (initial auto-detect on page load)
   useEffect(() => {
-    if (geoData?.shortAddress && !address) onAddressChange(geoData.shortAddress);
+    if (!geoData) return;
+    if (geoData.shortAddress && !address) onAddressChange(geoData.shortAddress);
+    if (geoData.houseNumber && !addrNumber) setAddrNumber(geoData.houseNumber);
+    if (geoData.city && !city) setCity(geoData.city);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [geoData]);
+
+  // GPS button — request fresh location and fill all fields
+  const handleGps = useCallback(async () => {
+    setGpsLoading(true);
+    try {
+      const geo = await getUserGeo();
+      if (geo.shortAddress) onAddressChange(geo.shortAddress);
+      if (geo.houseNumber)  setAddrNumber(geo.houseNumber);
+      if (geo.city)         setCity(geo.city);
+    } catch {
+      // permission denied or timeout — silently ignore
+    }
+    setGpsLoading(false);
+  }, [onAddressChange]);
 
   // Check delivery zone when address changes
   useEffect(() => {
@@ -106,7 +125,6 @@ export default function FinalizeScreen({
     geocodeAddress(debouncedAddress).then(async customerPos => {
       if (cancelled) return;
       if (!customerPos) {
-        // Address not found in maps — apply default fee
         setMatchedZone(null); setOutsideArea(false); setGeoFailed(true);
         onDeliveryFeeChange?.(DEFAULT_FEE);
         setZoneChecking(false);
@@ -123,7 +141,6 @@ export default function FinalizeScreen({
       setZoneChecking(false);
     }).catch(() => {
       if (!cancelled) {
-        // Network error — apply default fee and allow order
         setMatchedZone(null); setOutsideArea(false); setGeoFailed(true);
         onDeliveryFeeChange?.(DEFAULT_FEE);
         setZoneChecking(false);
@@ -132,16 +149,25 @@ export default function FinalizeScreen({
     return () => { cancelled = true; };
   }, [debouncedAddress, active, zonesConfigured]);
 
-  const pickSuggestion = useCallback((label) => {
-    onAddressChange(label);
+  // pickSuggestion — handles object { label, street, houseNumber, city } from searchAddress
+  const pickSuggestion = useCallback((s) => {
+    const streetPart = typeof s === 'object' ? (s.street || s.label || '') : s;
+    onAddressChange(streetPart);
+    if (typeof s === 'object') {
+      if (s.houseNumber) setAddrNumber(s.houseNumber);
+      if (s.city)        setCity(s.city);
+    }
     setSuggestions([]);
     setShowSugg(false);
     inputRef.current?.blur();
   }, [onAddressChange]);
 
   const hasAddress    = address.trim().length > 0;
+  const hasNumber     = addrNumber.trim().length > 0;
+  const hasCity       = city.trim().length > 0;
   const hasEnabledPay = Object.keys(PM_INFO).some(k => payMethods[k]);
   const isPayDisabled = !selectedPay || !payMethods[selectedPay];
+  const canAdvance    = hasAddress && hasNumber && hasCity && !isPayDisabled;
 
   const deliveryFee = matchedZone ? (matchedZone.fee ?? 0) : (geoFailed || outsideArea ? DEFAULT_FEE : 0);
   const total       = getCartTotal();
@@ -149,6 +175,8 @@ export default function FinalizeScreen({
 
   const btnLabel = () => {
     if (!hasAddress) return 'Informe o endereço';
+    if (!hasNumber)  return 'Informe o número';
+    if (!hasCity)    return 'Informe a cidade';
     if (!hasEnabledPay) return 'Sem forma de pagamento';
     const info = PM_INFO[selectedPay];
     if (info?.online) return `Ir para pagamento • ${fmtPrice(grandTotal)}`;
@@ -171,13 +199,32 @@ export default function FinalizeScreen({
         <div className="finalize-section">
           <h4 className="finalize-section-title">
             Endereço de entrega
-            {geoData && <span className="finalize-geo-badge">📍 3km de você</span>}
+            {geoData && <span className="finalize-geo-badge">📍 {geoData.km}km de você</span>}
           </h4>
+
+          {/* GPS button */}
+          <button
+            onClick={handleGps}
+            disabled={gpsLoading}
+            style={{
+              display: 'flex', alignItems: 'center', gap: 7,
+              background: gpsLoading ? '#f3f4f6' : '#eff6ff',
+              color: gpsLoading ? '#9ca3af' : '#1d4ed8',
+              border: '1px solid ' + (gpsLoading ? '#e5e7eb' : '#bfdbfe'),
+              borderRadius: 10, padding: '9px 14px',
+              fontSize: 13, fontWeight: 700, cursor: gpsLoading ? 'default' : 'pointer',
+              width: '100%', marginBottom: 10, transition: 'all .15s',
+            }}
+          >
+            <span style={{ fontSize: 16 }}>{gpsLoading ? '⏳' : '📍'}</span>
+            {gpsLoading ? 'Localizando...' : 'Usar minha localização'}
+          </button>
+
           <div className="address-autocomplete-wrap">
             <input
               ref={inputRef}
               className="checkout-input"
-              placeholder="Rua, bairro, cidade"
+              placeholder="Rua e bairro *"
               autoComplete="off"
               value={address}
               onChange={e => { onAddressChange(e.target.value); setShowSugg(true); setMatchedZone(null); setOutsideArea(false); }}
@@ -192,20 +239,29 @@ export default function FinalizeScreen({
                     <svg viewBox="0 0 24 24" width="14" height="14" style={{flexShrink:0,color:'#e8001d'}}>
                       <path fill="currentColor" d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/>
                     </svg>
-                    {s}
+                    {typeof s === 'object' ? s.label : s}
                   </li>
                 ))}
               </ul>
             )}
           </div>
 
-          <input
-            className="checkout-input"
-            placeholder="Número (ex: 42, 200, S/N)"
-            style={{ marginTop: 8 }}
-            value={addrNumber}
-            onChange={e => setAddrNumber(e.target.value)}
-          />
+          <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
+            <input
+              className="checkout-input"
+              placeholder="Número *"
+              style={{ flex: '0 0 120px' }}
+              value={addrNumber}
+              onChange={e => setAddrNumber(e.target.value)}
+            />
+            <input
+              className="checkout-input"
+              placeholder="Cidade *"
+              style={{ flex: 1 }}
+              value={city}
+              onChange={e => setCity(e.target.value)}
+            />
+          </div>
 
           {/* Zone feedback */}
           {zonesConfigured && hasAddress && (
@@ -286,9 +342,8 @@ export default function FinalizeScreen({
       <div className="screen-footer">
         <button
           className="screen-advance-btn"
-          disabled={!hasAddress || isPayDisabled}
-          onClick={() => hasAddress && !isPayDisabled
-            && onAdvance(selectedPay, changeFor ? Number(changeFor) : null, addrNumber.trim() || null)}
+          disabled={!canAdvance}
+          onClick={() => canAdvance && onAdvance(selectedPay, changeFor ? Number(changeFor) : null, addrNumber.trim(), city.trim())}
         >
           {btnLabel()}
         </button>

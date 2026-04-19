@@ -15,12 +15,11 @@ function haversineKm(lat1, lon1, lat2, lon2) {
 
 function buildShortAddress(a) {
   const street   = a.road || a.pedestrian || a.footway || a.path || '';
-  const number   = a.house_number ? `, ${a.house_number}` : '';
   const district = a.suburb || a.neighbourhood || a.quarter || a.city_district || '';
-  return [street + number, district].filter(Boolean).join(', ');
+  return [street, district].filter(Boolean).join(', ');
 }
 
-/** Pede localização e retorna { km, shortAddress, fullAddress, lat, lon } */
+/** Pede localização e retorna { km, shortAddress, fullAddress, lat, lon, houseNumber, city } */
 export function getUserGeo() {
   return new Promise((resolve, reject) => {
     if (!navigator.geolocation) return reject('unsupported');
@@ -37,9 +36,11 @@ export function getUserGeo() {
           const a = data.address || {};
           const shortAddress = buildShortAddress(a);
           const fullAddress  = data.display_name || shortAddress;
-          resolve({ km, shortAddress, fullAddress, lat, lon });
+          const houseNumber  = a.house_number || '';
+          const city         = a.city || a.town || a.municipality || a.county || '';
+          resolve({ km, shortAddress, fullAddress, lat, lon, houseNumber, city });
         } catch {
-          resolve({ km, shortAddress: '', fullAddress: '', lat, lon });
+          resolve({ km, shortAddress: '', fullAddress: '', lat, lon, houseNumber: '', city: '' });
         }
       },
       () => reject('denied'),
@@ -48,7 +49,10 @@ export function getUserGeo() {
   });
 }
 
-/** Autocomplete de endereço via Nominatim (Brasil) */
+/**
+ * Autocomplete de endereço via Nominatim (Brasil)
+ * Retorna array de objetos { label, street, district, houseNumber, city }
+ */
 export async function searchAddress(query) {
   if (!query || query.trim().length < 4) return [];
   try {
@@ -59,13 +63,14 @@ export async function searchAddress(query) {
     const data = await res.json();
     return data
       .map(item => {
-        const a = item.address || {};
-        const street   = a.road || a.pedestrian || '';
-        const number   = a.house_number ? `, ${a.house_number}` : '';
-        const district = a.suburb || a.neighbourhood || '';
-        const city     = a.city || a.town || a.municipality || '';
-        const label    = [street + number, district, city].filter(Boolean).join(', ');
-        return label || null;
+        const a           = item.address || {};
+        const street      = a.road || a.pedestrian || '';
+        const houseNumber = a.house_number || '';
+        const district    = a.suburb || a.neighbourhood || '';
+        const city        = a.city || a.town || a.municipality || '';
+        const streetPart  = [street, district].filter(Boolean).join(', ');
+        const label       = [streetPart, houseNumber, city].filter(Boolean).join(', ');
+        return label ? { label, street: streetPart, houseNumber, city } : null;
       })
       .filter(Boolean);
   } catch {

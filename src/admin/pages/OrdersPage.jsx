@@ -1,5 +1,7 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef, lazy, Suspense } from 'react';
 import { printOrder as thermalPrintOrder } from '../../utils/thermalPrint';
+
+const OrdersMap = lazy(() => import('../components/OrdersMap'));
 
 function fmtMoney(cents) { return 'R$ ' + (cents / 100).toFixed(2).replace('.', ','); }
 function fmtTime(iso) {
@@ -398,6 +400,7 @@ function playPreset(ctx, key) {
 export default function OrdersPage({ token, storeId }) {
   const [orders, setOrders]           = useState([]);
   const [loading, setLoading]         = useState(true);
+  const [showMap, setShowMap]         = useState(false);
   const [deliveryMinutes, setDeliveryMinutes] = useState(0);
   const [autoPrint, setAutoPrint]     = useState(() => localStorage.getItem('kanban_auto_print') === 'true');
   const [autoAccept, setAutoAccept]   = useState(() => localStorage.getItem('kanban_auto_accept') === 'true');
@@ -635,6 +638,13 @@ export default function OrdersPage({ token, storeId }) {
         </div>
         <div style={{ display: 'flex', gap: 8 }}>
           <button
+            className={`adm-btn${showMap ? ' primary' : ' ghost'}`}
+            style={{ fontSize: 13 }}
+            onClick={() => setShowMap(p => !p)}
+          >
+            🗺️ Mapa
+          </button>
+          <button
             className={`adm-btn${soundPanel ? ' primary' : ' ghost'}`}
             style={{ fontSize: 13 }}
             onClick={() => setSoundPanel(p => !p)}
@@ -713,6 +723,16 @@ export default function OrdersPage({ token, storeId }) {
             O som toca mesmo se a aba estiver em segundo plano. Clique na página pelo menos uma vez para ativar o áudio.
           </p>
         </div>
+      )}
+
+      {showMap && (
+        <Suspense fallback={
+          <div style={{ height: 480, background: '#f3f4f6', borderRadius: 14, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#9ca3af', fontSize: 14, marginBottom: 20 }}>
+            🗺️ Carregando mapa...
+          </div>
+        }>
+          <OrdersMap orders={orders} token={token} storeId={storeId} />
+        </Suspense>
       )}
 
       <div className="kanban-board">

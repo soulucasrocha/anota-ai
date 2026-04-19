@@ -414,9 +414,11 @@ export default function App() {
         onAddressChange={setAddress}
         getCartTotal={getCartTotal}
         onBack={() => setScreen('checkout')}
-        onAdvance={(method, changeFor, addrNumber) => {
-          const fullAddress = addrNumber ? `${address}${address ? `, nº ${addrNumber}` : addrNumber}` : address;
-          if (addrNumber) setAddress(fullAddress);
+        onAdvance={(method, changeFor, addrNumber, city) => {
+          let fullAddress = address;
+          if (addrNumber) fullAddress = `${address}${address ? `, nº ${addrNumber}` : addrNumber}`;
+          if (city) fullAddress = `${fullAddress}${fullAddress ? `, ${city}` : city}`;
+          if (addrNumber || city) setAddress(fullAddress);
           setPaymentMethod(method);
           const isOnline = method === 'pix_online' || method === 'card_online';
           if (isOnline) {
