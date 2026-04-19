@@ -69,7 +69,7 @@ export default function AdminApp() {
   const pages = {
     dashboard:    <ReportsPage      token={token} storeId={storeId} />,
     products:     <ProductsPage     token={token} storeId={storeId} />,
-    orders:       <OrdersPage       token={token} storeId={storeId} />,
+    orders:       <OrdersPage       token={token} storeId={storeId} store={currentStore} />,
     transactions: <TransactionsPage token={token} storeId={storeId} />,
     payments:     <PaymentMethodsPage token={token} storeId={storeId} />,
     profile:      <StoreProfilePage token={token} storeId={storeId} store={currentStore} onUpdated={reloadStores} />,

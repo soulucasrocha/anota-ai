@@ -24,9 +24,21 @@ export default function StoreProfilePage({ token, storeId, store, onUpdated }) {
   const [slug,      setSlug]      = useState(store?.slug      || '');
   const [logoUrl,   setLogoUrl]   = useState(store?.logo_url  || '');
   const [whatsapp,  setWhatsapp]  = useState(store?.whatsapp  || '');
+  const [address,   setAddress]   = useState('');
   const [hours,     setHours]     = useState(() => initHours(store?.hours));
   const [saving,    setSaving]    = useState(false);
   const [saved,     setSaved]     = useState(false);
+
+  // Busca o endereço salvo em delivery settings
+  useEffect(() => {
+    if (!storeId || !token) return;
+    fetch(`/api/admin-products?type=delivery&storeId=${storeId}`, {
+      headers: { 'x-admin-token': token },
+    })
+      .then(r => r.json())
+      .then(d => { if (d.delivery?.address) setAddress(d.delivery.address); })
+      .catch(() => {});
+  }, [storeId, token]);
 
   // Sincroniza campos quando store carrega/muda (ex: após refresh)
   useEffect(() => {
@@ -52,11 +64,20 @@ export default function StoreProfilePage({ token, storeId, store, onUpdated }) {
   async function save() {
     setSaving(true);
     try {
-      await fetch('/api/admin-stores', {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json', 'x-admin-token': token },
-        body: JSON.stringify({ id: storeId, name, slug, logo_url: logoUrl, whatsapp, hours }),
-      });
+      await Promise.all([
+        // Salva perfil da loja (nome, slug, logo, whatsapp, horários)
+        fetch('/api/admin-stores', {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json', 'x-admin-token': token },
+          body: JSON.stringify({ id: storeId, name, slug, logo_url: logoUrl, whatsapp, hours }),
+        }),
+        // Salva endereço em delivery settings (usado pelo mapa do kanban)
+        fetch('/api/admin-products?type=delivery', {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json', 'x-admin-token': token, 'x-store-id': storeId },
+          body: JSON.stringify({ delivery: { address } }),
+        }),
+      ]);
       setSaved(true);
       setTimeout(() => setSaved(false), 2000);
       onUpdated?.();
@@ -103,6 +124,20 @@ export default function StoreProfilePage({ token, storeId, store, onUpdated }) {
           <p style={{ fontSize: 12, color: '#aaa', marginTop: 4 }}>
             Número com DDD, sem espaços ou símbolos. Ex: <b>11999998888</b><br/>
             Aparece como botão "Falar com a loja" no pedido do cliente.
+          </p>
+        </div>
+
+        {/* Endereço da loja */}
+        <div>
+          <label className="adm-label">📍 Endereço da loja</label>
+          <input
+            className="adm-input"
+            value={address}
+            onChange={e => setAddress(e.target.value)}
+            placeholder="Ex: Rua das Flores, 123, Centro, São Paulo - SP"
+          />
+          <p style={{ fontSize: 12, color: '#aaa', marginTop: 4 }}>
+            Usado para centralizar o mapa de pedidos e calcular distâncias de entrega.
           </p>
         </div>
 

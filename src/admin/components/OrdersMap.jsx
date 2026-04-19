@@ -18,7 +18,7 @@ async function geocodeAddress(address) {
 
   try {
     const res = await fetch(
-      `https://nominatim.openstreetmap.org/search?format=json&limit=1&q=${encodeURIComponent(address)}`,
+      `https://nominatim.openstreetmap.org/search?format=json&limit=1&countrycodes=br&q=${encodeURIComponent(address)}`,
       { headers: { 'Accept-Language': 'pt-BR,pt;q=0.9' } }
     );
     const data = await res.json();
@@ -87,25 +87,32 @@ function driverIcon(name, online) {
   });
 }
 
-function storeIcon() {
+function storeIcon(logoUrl) {
+  const inner = logoUrl
+    ? `<img src="${logoUrl}" alt="Loja"
+         style="width:38px;height:38px;border-radius:50%;object-fit:cover;border:3px solid #fff;background:#fff;display:block;"
+         onerror="this.style.display='none';this.nextElementSibling.style.display='flex';" />
+       <span style="display:none;align-items:center;justify-content:center;width:38px;height:38px;font-size:20px;">🍕</span>`
+    : `<span style="display:flex;align-items:center;justify-content:center;width:38px;height:38px;font-size:20px;">🍕</span>`;
+
   return L.divIcon({
     className: '',
-    iconSize:   [44, 44],
-    iconAnchor: [22, 44],
+    iconSize:   [44, 52],
+    iconAnchor: [22, 52],
     html: `
       <div style="text-align:center">
         <div style="
-          background:#e53935;color:#fff;font-size:20px;
-          width:40px;height:40px;border-radius:50%;
+          background:#e53935;
+          width:44px;height:44px;border-radius:50%;
           display:flex;align-items:center;justify-content:center;
           box-shadow:0 3px 12px rgba(229,57,53,.5);
-          border:3px solid #fff
-        ">🍕</div>
+          border:3px solid #fff;overflow:hidden;
+        ">${inner}</div>
         <div style="
           width:0;height:0;margin:0 auto;
-          border-left:6px solid transparent;
-          border-right:6px solid transparent;
-          border-top:8px solid #e53935
+          border-left:7px solid transparent;
+          border-right:7px solid transparent;
+          border-top:9px solid #e53935
         "></div>
       </div>`,
   });
@@ -138,7 +145,7 @@ function FitBounds({ points }) {
 }
 
 /* ── Main component ───────────────────────────────────────────────────────── */
-export default function OrdersMap({ orders, token, storeId }) {
+export default function OrdersMap({ orders, token, storeId, storeLogoUrl }) {
   const [orderCoords, setOrderCoords] = useState({}); // orderId → {lat,lng}|null
   const [storeCoords, setStoreCoords] = useState(null);
   const [drivers,     setDrivers]     = useState([]);
@@ -296,7 +303,7 @@ export default function OrdersMap({ orders, token, storeId }) {
 
         {/* Store marker */}
         {storeCoords && (
-          <Marker position={[storeCoords.lat, storeCoords.lng]} icon={storeIcon()}>
+          <Marker position={[storeCoords.lat, storeCoords.lng]} icon={storeIcon(storeLogoUrl)}>
             <Popup>
               <strong>🍕 Loja</strong><br />
               Ponto de partida das entregas

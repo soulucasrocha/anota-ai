@@ -397,7 +397,7 @@ function playPreset(ctx, key) {
   }
 }
 
-export default function OrdersPage({ token, storeId }) {
+export default function OrdersPage({ token, storeId, store }) {
   const [orders, setOrders]           = useState([]);
   const [loading, setLoading]         = useState(true);
   const [showMap, setShowMap]         = useState(false);
@@ -731,7 +731,7 @@ export default function OrdersPage({ token, storeId }) {
             🗺️ Carregando mapa...
           </div>
         }>
-          <OrdersMap orders={orders} token={token} storeId={storeId} />
+          <OrdersMap orders={orders} token={token} storeId={storeId} storeLogoUrl={store?.logo_url} />
         </Suspense>
       )}
 
