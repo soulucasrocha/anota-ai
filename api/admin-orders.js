@@ -2,6 +2,8 @@ import { verifyAdminToken } from './_verify.js';
 import { sb } from './_supabase.js';
 
 export default async function handler(req, res) {
+  res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate');
+  res.setHeader('Pragma', 'no-cache');
   if (!verifyAdminToken(req)) return res.status(401).json({ error: 'Unauthorized' });
 
   const storeId = req.query.storeId || req.body?.storeId || req.headers['x-store-id'];
