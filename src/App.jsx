@@ -421,9 +421,11 @@ export default function App() {
         getCartTotal={getCartTotal}
         onBack={() => setScreen('checkout')}
         onAdvance={(method, changeFor, addrNumber, city, commission) => {
-          let fullAddress = address;
-          if (addrNumber) fullAddress = `${address}${address ? `, nº ${addrNumber}` : addrNumber}`;
-          if (city) fullAddress = `${fullAddress}${fullAddress ? `, ${city}` : city}`;
+          // Formato otimizado para geocodificação: "Rua, número, bairro, cidade"
+          // Número fica logo após a rua para melhor precisão no Nominatim
+          const streetPart = address.trim();
+          const parts = [streetPart, addrNumber, city].filter(Boolean);
+          let fullAddress = parts.join(', ');
           if (addrNumber || city) setAddress(fullAddress);
           setDriverCommission(commission || 0);
           setPaymentMethod(method);
