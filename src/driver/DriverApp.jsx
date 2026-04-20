@@ -102,8 +102,8 @@ function LoginPage({ storeId, onLogin }) {
 // ── History card ───────────────────────────────────────────────────────────────
 function HistoryCard({ order }) {
   const [expanded, setExpanded] = useState(false);
-  const fee      = order.delivery_fee ?? 0;
-  const customer = order.customer || {};
+  const commission = order.driver_commission != null ? order.driver_commission : null;
+  const customer   = order.customer || {};
   const phone    = customer.phone || '';
   const waPhone  = phone.replace(/\D/g, '');
   const items    = order.items || [];
@@ -117,11 +117,13 @@ function HistoryCard({ order }) {
         <span style={{ fontSize: 11, background: '#d1fae5', color: '#065f46', fontWeight: 700, padding: '2px 7px', borderRadius: 99 }}>✅ Entregue</span>
       </div>
 
-      {/* Delivery fee — always visible */}
-      <div className="drv-fee-row" style={{ marginTop: 8, marginBottom: 8 }}>
-        <span className="drv-fee-label">Taxa de entrega</span>
-        <span className="drv-fee-val">{fee > 0 ? fmtMoney(fee) : 'Grátis'}</span>
-      </div>
+      {/* Comissão — always visible */}
+      {commission != null && (
+        <div className="drv-fee-row" style={{ marginTop: 8, marginBottom: 8, background: '#eff6ff', borderRadius: 8, padding: '6px 10px' }}>
+          <span className="drv-fee-label" style={{ color: '#1d4ed8', fontWeight: 700 }}>🏍️ Sua comissão</span>
+          <span className="drv-fee-val" style={{ color: '#1d4ed8', fontWeight: 800 }}>{commission > 0 ? fmtMoney(commission) : 'Sem comissão'}</span>
+        </div>
+      )}
 
       {/* Toggle */}
       <button className="drv-details-toggle" onClick={() => setExpanded(v => !v)}>
@@ -182,7 +184,7 @@ function OrderCard({ order, mode, onAction, loading, activeAddresses }) {
   const phone      = customer.phone || '';
   const waPhone    = phone.replace(/\D/g, '');
   const assignSt   = order.assignment?.status;
-  const fee        = order.delivery_fee ?? 0;
+  const commission = order.driver_commission != null ? order.driver_commission : null;
 
   // Route: if there are multiple active deliveries, use all addresses; otherwise just this one
   const routeAddresses = activeAddresses && activeAddresses.length > 1
@@ -206,13 +208,13 @@ function OrderCard({ order, mode, onAction, loading, activeAddresses }) {
         </div>
       </div>
 
-      {/* ── Delivery fee — always visible ── */}
-      <div className="drv-fee-row">
-        <span className="drv-fee-label">Taxa de entrega</span>
-        <span className="drv-fee-val">
-          {fee > 0 ? fmtMoney(fee) : 'Grátis'}
-        </span>
-      </div>
+      {/* ── Comissão — always visible ── */}
+      {commission != null && (
+        <div className="drv-fee-row" style={{ background: '#eff6ff', borderRadius: 8, padding: '6px 10px', margin: '6px 0' }}>
+          <span className="drv-fee-label" style={{ color: '#1d4ed8', fontWeight: 700 }}>🏍️ Sua comissão</span>
+          <span className="drv-fee-val" style={{ color: '#1d4ed8', fontWeight: 800 }}>{commission > 0 ? fmtMoney(commission) : 'Sem comissão'}</span>
+        </div>
+      )}
 
       {/* ── Ver detalhes toggle ── */}
       <button className="drv-details-toggle" onClick={() => setExpanded(v => !v)}>
@@ -508,14 +510,14 @@ export default function DriverApp({ storeId }) {
                     <span className="drv-hist-stat-label">Entregas</span>
                   </div>
                   <div className="drv-hist-stat">
-                    <span className="drv-hist-stat-val">{fmtMoney(history.reduce((s,o) => s + (o.delivery_fee||0), 0))}</span>
-                    <span className="drv-hist-stat-label">Total em taxas</span>
+                    <span className="drv-hist-stat-val">{fmtMoney(history.reduce((s,o) => s + (o.driver_commission ?? o.delivery_fee ?? 0), 0))}</span>
+                    <span className="drv-hist-stat-label">Total em comissões</span>
                   </div>
                 </div>
 
                 {/* Days */}
                 {groupByDay(history).map(([dayKey, { label, orders: dayOrders }]) => {
-                  const dayFees = dayOrders.reduce((s,o) => s + (o.delivery_fee||0), 0);
+                  const dayFees = dayOrders.reduce((s,o) => s + (o.driver_commission ?? o.delivery_fee ?? 0), 0);
                   return (
                     <div key={dayKey} className="drv-hist-day">
                       <div className="drv-hist-day-header">

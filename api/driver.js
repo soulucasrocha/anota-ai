@@ -256,7 +256,7 @@ export default async function handler(req, res) {
     const orderIds = assignments.map(a => a.order_id);
     const { data: orders } = await sb()
       .from('orders')
-      .select('id, total, delivery_fee, address, customer, items, created_at, cancel_reason')
+      .select('id, total, delivery_fee, driver_commission, address, customer, items, created_at, cancel_reason')
       .in('id', orderIds);
 
     const orderMap = {};

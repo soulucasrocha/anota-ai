@@ -72,7 +72,8 @@ function DotMarker({ pos, index, color, onDelete, onMove }) {
 export default function DeliveryAreaPage({ token, storeId }) {
   const [address,      setAddress]      = useState('');
   const [deliveryTime, setDeliveryTime] = useState('');
-  const [defaultFee,   setDefaultFee]   = useState('5.00'); // taxa base (fora das zonas)
+  const [defaultFee,       setDefaultFee]       = useState('5.00'); // taxa base cliente (fora das zonas)
+  const [defaultDriverFee, setDefaultDriverFee] = useState('0.00'); // taxa base entregador (fora das zonas)
   const [zones,        setZones]        = useState([]);
   const [storePos,     setStorePos]     = useState(null);
   const [geocoding,    setGeocoding]    = useState(false);
@@ -103,6 +104,9 @@ export default function DeliveryAreaPage({ token, storeId }) {
         setDeliveryTime(d.delivery?.delivery_time != null ? String(d.delivery.delivery_time) : '');
         if (d.delivery?.default_fee != null) {
           setDefaultFee((d.delivery.default_fee / 100).toFixed(2));
+        }
+        if (d.delivery?.default_driver_fee != null) {
+          setDefaultDriverFee((d.delivery.default_driver_fee / 100).toFixed(2));
         }
         if (d.delivery?.zones?.length) {
           setZones(d.delivery.zones);
@@ -140,6 +144,7 @@ export default function DeliveryAreaPage({ token, storeId }) {
           address,
           delivery_time: deliveryTime !== '' ? Number(deliveryTime) : null,
           default_fee: defaultFee !== '' ? Math.round(Number(defaultFee) * 100) : 500,
+          default_driver_fee: defaultDriverFee !== '' ? Math.round(Number(defaultDriverFee) * 100) : 0,
           zones,
           cities: zones.map(z => ({ name: z.name, fee: z.fee, neighborhoods: [] })),
         },
@@ -248,15 +253,23 @@ export default function DeliveryAreaPage({ token, storeId }) {
           </div>
           <div style={{ flexShrink: 0 }}>
             <label className="adm-label">
-              Taxa base (R$)
+              Taxa base cliente (R$)
               <span style={{ marginLeft: 6, fontSize: 11, color: '#9ca3af', fontWeight: 400 }}>fora das zonas</span>
             </label>
             <input className="adm-input" type="number" step="0.01" min="0" placeholder="5.00"
-              value={defaultFee} onChange={e => setDefaultFee(e.target.value)} style={{ width: 110 }} />
+              value={defaultFee} onChange={e => setDefaultFee(e.target.value)} style={{ width: 120 }} />
+          </div>
+          <div style={{ flexShrink: 0 }}>
+            <label className="adm-label" style={{ color: '#1d4ed8' }}>
+              🏍️ Comissão base entregador (R$)
+              <span style={{ marginLeft: 6, fontSize: 11, color: '#9ca3af', fontWeight: 400 }}>fora das zonas</span>
+            </label>
+            <input className="adm-input" type="number" step="0.01" min="0" placeholder="0.00"
+              value={defaultDriverFee} onChange={e => setDefaultDriverFee(e.target.value)} style={{ width: 140 }} />
           </div>
         </div>
         <div style={{ padding: '0 16px 12px', fontSize: 12, color: '#9ca3af' }}>
-          💡 A taxa base é cobrada quando o endereço do cliente está fora das zonas ou não foi possível localizá-lo.
+          💡 As taxas base são aplicadas quando o endereço está fora das zonas. O cliente vê a taxa dele; o entregador vê apenas a comissão dele.
         </div>
       </div>
 

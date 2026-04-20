@@ -123,7 +123,9 @@ export default function App() {
   const [deliveryZones,      setDeliveryZones]      = useState([]);
   const [deliveryAddress,    setDeliveryAddress]    = useState('');
   const [deliveryFee,        setDeliveryFee]        = useState(0);
-  const [deliveryDefaultFee, setDeliveryDefaultFee] = useState(500);
+  const [deliveryDefaultFee,       setDeliveryDefaultFee]       = useState(500);
+  const [deliveryDefaultDriverFee, setDeliveryDefaultDriverFee] = useState(0);
+  const [driverCommission,         setDriverCommission]         = useState(0);
 
   // Wrapper de setScreen que salva na sessão
   const setScreen = useCallback((s) => {
@@ -154,7 +156,8 @@ export default function App() {
         if (d.defaultPayment) setDefaultPayment(d.defaultPayment);
         if (d.deliveryZones)      setDeliveryZones(d.deliveryZones);
         if (d.deliveryAddress)    setDeliveryAddress(d.deliveryAddress);
-        if (d.deliveryDefaultFee != null) setDeliveryDefaultFee(d.deliveryDefaultFee);
+        if (d.deliveryDefaultFee       != null) setDeliveryDefaultFee(d.deliveryDefaultFee);
+        if (d.deliveryDefaultDriverFee != null) setDeliveryDefaultDriverFee(d.deliveryDefaultDriverFee);
         // Inject tracking scripts
         if (d.gtmId && !document.getElementById('gtm-script')) {
           const s = document.createElement('script');
@@ -296,7 +299,7 @@ export default function App() {
 
   // ── Delivery order handler ─────────────────────────────────────────────────
 
-  const handleDeliveryOrder = useCallback(async (method, changeFor, fullAddress) => {
+  const handleDeliveryOrder = useCallback(async (method, changeFor, fullAddress, commission) => {
     const items = Object.values(cart).map(({ item, qty }) => ({ id: item.id, name: item.name, qty, price: item.price, note: item.cartNote || '' }));
     const orderId = `del-${Date.now()}`;
     const subtotal = getCartTotal();
@@ -322,6 +325,7 @@ export default function App() {
           storeId: storeId || undefined,
           changeFor: changeFor || null,
           changeNote: changeNote || null,
+          driver_commission: commission || 0,
           hashtag: sessionStorage.getItem('campaign_ref') || null,
         }),
       });
@@ -416,17 +420,18 @@ export default function App() {
         onAddressChange={setAddress}
         getCartTotal={getCartTotal}
         onBack={() => setScreen('checkout')}
-        onAdvance={(method, changeFor, addrNumber, city) => {
+        onAdvance={(method, changeFor, addrNumber, city, commission) => {
           let fullAddress = address;
           if (addrNumber) fullAddress = `${address}${address ? `, nº ${addrNumber}` : addrNumber}`;
           if (city) fullAddress = `${fullAddress}${fullAddress ? `, ${city}` : city}`;
           if (addrNumber || city) setAddress(fullAddress);
+          setDriverCommission(commission || 0);
           setPaymentMethod(method);
           const isOnline = method === 'pix_online' || method === 'card_online';
           if (isOnline) {
             setScreen('pix');
           } else {
-            handleDeliveryOrder(method, changeFor, fullAddress);
+            handleDeliveryOrder(method, changeFor, fullAddress, commission);
           }
         }}
         geoData={geoData}
@@ -436,6 +441,7 @@ export default function App() {
         deliveryZones={deliveryZones}
         deliveryAddress={deliveryAddress}
         deliveryDefaultFee={deliveryDefaultFee}
+        deliveryDefaultDriverFee={deliveryDefaultDriverFee}
         onDeliveryFeeChange={setDeliveryFee}
       />
 
@@ -443,6 +449,7 @@ export default function App() {
         active={screen === 'pix'}
         amount={getCartTotal() + deliveryFee}
         deliveryFee={deliveryFee}
+        driverCommission={driverCommission}
         cart={cart}
         customer={{ name: checkoutName, phone: checkoutPhone }}
         deliveryAddress={address}

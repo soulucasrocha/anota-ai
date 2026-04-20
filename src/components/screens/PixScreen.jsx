@@ -39,7 +39,7 @@ async function sendCapiPurchase(value, orderId, storeId) {
 
 // ────────────────────────────────────────────────────────────────────────────
 
-async function saveOrderToDashboard({ pixId, cart, amount, customer, address, storeId }) {
+async function saveOrderToDashboard({ pixId, cart, amount, deliveryFee, driverCommission, customer, address, storeId }) {
   try {
     const items = Object.values(cart || {}).map(({ item, qty }) => ({
       id: item.id, name: item.name, qty, price: item.price, note: item.cartNote || '',
@@ -47,7 +47,7 @@ async function saveOrderToDashboard({ pixId, cart, amount, customer, address, st
     await fetch('/api/order-save', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ pixId, items, total: amount, customer, address, status: 'paid', storeId: storeId || undefined }),
+      body: JSON.stringify({ pixId, items, total: amount, delivery_fee: deliveryFee || 0, driver_commission: driverCommission || 0, customer, address, status: 'paid', storeId: storeId || undefined }),
     });
   } catch (e) { console.warn('order-save:', e); }
 }
@@ -93,7 +93,7 @@ function loadPending() {
 }
 function clearPending() { try { localStorage.removeItem(LS_PENDING_KEY); } catch {} }
 
-export default function PixScreen({ active, amount, deliveryFee, cart, customer, deliveryAddress, storeId, onBack, onPaid, showToast }) {
+export default function PixScreen({ active, amount, deliveryFee, driverCommission, cart, customer, deliveryAddress, storeId, onBack, onPaid, showToast }) {
   const [pixKey, setPixKey]               = useState('Gerando PIX...');
   const [qrCode, setQrCode]               = useState(null);
   const [ready, setReady]                 = useState(false);
@@ -177,6 +177,8 @@ export default function PixScreen({ active, amount, deliveryFee, cart, customer,
             pixId: id,
             cart,
             amount: amountRef.current,
+            deliveryFee: deliveryFee || 0,
+            driverCommission: driverCommission || 0,
             customer: cust,
             address: addressRef.current,
             storeId,

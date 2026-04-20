@@ -23,7 +23,7 @@ const PM_INFO = {
 export default function FinalizeScreen({
   active, address, onAddressChange, getCartTotal, onBack, onAdvance,
   geoData, slug, paymentMethodsData, defaultPaymentData,
-  deliveryZones, deliveryAddress, deliveryDefaultFee, onDeliveryFeeChange,
+  deliveryZones, deliveryAddress, deliveryDefaultFee, deliveryDefaultDriverFee, onDeliveryFeeChange,
 }) {
   const [suggestions, setSuggestions] = useState([]);
   const [showSugg,    setShowSugg]    = useState(false);
@@ -42,7 +42,8 @@ export default function FinalizeScreen({
   const [geoFailed,    setGeoFailed]      = useState(false);
   const [storePos,     setStorePos]       = useState(null);
 
-  const DEFAULT_FEE = deliveryDefaultFee ?? 500;
+  const DEFAULT_FEE        = deliveryDefaultFee       ?? 500;
+  const DEFAULT_DRIVER_FEE = deliveryDefaultDriverFee ?? 0;
 
   const debouncedAddress = useDebounce(address, 800);
   const inputRef = useRef(null);
@@ -169,7 +170,8 @@ export default function FinalizeScreen({
   const isPayDisabled = !selectedPay || !payMethods[selectedPay];
   const canAdvance    = hasAddress && hasNumber && hasCity && !isPayDisabled;
 
-  const deliveryFee = matchedZone ? (matchedZone.fee ?? 0) : (geoFailed || outsideArea ? DEFAULT_FEE : 0);
+  const deliveryFee      = matchedZone ? (matchedZone.fee       ?? 0) : (geoFailed || outsideArea ? DEFAULT_FEE        : 0);
+  const driverCommission = matchedZone ? (matchedZone.driverFee ?? 0) : (geoFailed || outsideArea ? DEFAULT_DRIVER_FEE : DEFAULT_DRIVER_FEE);
   const total       = getCartTotal();
   const grandTotal  = total + deliveryFee;
 
@@ -343,7 +345,7 @@ export default function FinalizeScreen({
         <button
           className="screen-advance-btn"
           disabled={!canAdvance}
-          onClick={() => canAdvance && onAdvance(selectedPay, changeFor ? Number(changeFor) : null, addrNumber.trim(), city.trim())}
+          onClick={() => canAdvance && onAdvance(selectedPay, changeFor ? Number(changeFor) : null, addrNumber.trim(), city.trim(), driverCommission)}
         >
           {btnLabel()}
         </button>

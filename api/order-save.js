@@ -42,7 +42,7 @@ export default async function handler(req, res) {
   }
 
   // Default: save order
-  const { pixId, items, total, delivery_fee, customer, address, status, paymentMethod, deliveryPayment, changeFor, changeNote, hashtag } = req.body || {};
+  const { pixId, items, total, delivery_fee, driver_commission, customer, address, status, paymentMethod, deliveryPayment, changeFor, changeNote, hashtag } = req.body || {};
   if (!total) return res.status(400).json({ error: 'missing total' });
 
   // Cross-reference customer phone with WhatsApp leads to get tag + name
@@ -77,6 +77,7 @@ export default async function handler(req, res) {
     kanban_status: kanbanStatus,
     finalized: false,
     delivery_fee: delivery_fee || 0,
+    driver_commission: driver_commission || 0,
     change_for: changeFor || null,
     change_note: changeNote || null,
     hashtag: waTag,
