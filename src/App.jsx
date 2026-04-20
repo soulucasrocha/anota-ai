@@ -120,9 +120,10 @@ export default function App() {
   const [menuCategories, setMenuCategories]     = useState([]);
   const [paymentMethods, setPaymentMethods]     = useState(null);
   const [defaultPayment, setDefaultPayment]     = useState(null);
-  const [deliveryZones,  setDeliveryZones]      = useState([]);
-  const [deliveryAddress,setDeliveryAddress]    = useState('');
-  const [deliveryFee,    setDeliveryFee]        = useState(0);
+  const [deliveryZones,      setDeliveryZones]      = useState([]);
+  const [deliveryAddress,    setDeliveryAddress]    = useState('');
+  const [deliveryFee,        setDeliveryFee]        = useState(0);
+  const [deliveryDefaultFee, setDeliveryDefaultFee] = useState(500);
 
   // Wrapper de setScreen que salva na sessão
   const setScreen = useCallback((s) => {
@@ -151,8 +152,9 @@ export default function App() {
         if (d.categories && d.categories.length > 0) setMenuCategories(d.categories);
         if (d.paymentMethods) setPaymentMethods(d.paymentMethods);
         if (d.defaultPayment) setDefaultPayment(d.defaultPayment);
-        if (d.deliveryZones)   setDeliveryZones(d.deliveryZones);
-        if (d.deliveryAddress) setDeliveryAddress(d.deliveryAddress);
+        if (d.deliveryZones)      setDeliveryZones(d.deliveryZones);
+        if (d.deliveryAddress)    setDeliveryAddress(d.deliveryAddress);
+        if (d.deliveryDefaultFee != null) setDeliveryDefaultFee(d.deliveryDefaultFee);
         // Inject tracking scripts
         if (d.gtmId && !document.getElementById('gtm-script')) {
           const s = document.createElement('script');
@@ -433,6 +435,7 @@ export default function App() {
         defaultPaymentData={defaultPayment}
         deliveryZones={deliveryZones}
         deliveryAddress={deliveryAddress}
+        deliveryDefaultFee={deliveryDefaultFee}
         onDeliveryFeeChange={setDeliveryFee}
       />
 

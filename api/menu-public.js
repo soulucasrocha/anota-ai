@@ -57,8 +57,9 @@ export default async function handler(req, res) {
       categories: categoriesList,
       pixelId: tracking.pixel_id || null,
       gtmId:   tracking.gtm_id   || null,
-      deliveryZones:   delivery?.zones   || [],
-      deliveryAddress: delivery?.address || '',
+      deliveryZones:       delivery?.zones       || [],
+      deliveryAddress:     delivery?.address     || '',
+      deliveryDefaultFee:  delivery?.default_fee ?? 500,
     };
 
     if (!products || !products.length) {

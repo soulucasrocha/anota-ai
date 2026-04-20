@@ -72,6 +72,7 @@ function DotMarker({ pos, index, color, onDelete, onMove }) {
 export default function DeliveryAreaPage({ token, storeId }) {
   const [address,      setAddress]      = useState('');
   const [deliveryTime, setDeliveryTime] = useState('');
+  const [defaultFee,   setDefaultFee]   = useState('5.00'); // taxa base (fora das zonas)
   const [zones,        setZones]        = useState([]);
   const [storePos,     setStorePos]     = useState(null);
   const [geocoding,    setGeocoding]    = useState(false);
@@ -79,11 +80,12 @@ export default function DeliveryAreaPage({ token, storeId }) {
   const [saved,        setSaved]        = useState(false);
 
   // Zone form
-  const [newName,   setNewName]   = useState('');
-  const [newRadius, setNewRadius] = useState('');
-  const [newFee,    setNewFee]    = useState('');
-  const [editId,    setEditId]    = useState(null);
-  const [zoneType,  setZoneType]  = useState('circle'); // 'circle' | 'polygon'
+  const [newName,      setNewName]      = useState('');
+  const [newRadius,    setNewRadius]    = useState('');
+  const [newFee,       setNewFee]       = useState('');
+  const [newDriverFee, setNewDriverFee] = useState('');
+  const [editId,       setEditId]       = useState(null);
+  const [zoneType,     setZoneType]     = useState('circle'); // 'circle' | 'polygon'
 
   // Polygon drawing state
   const [drawing,    setDrawing]    = useState(false);
@@ -99,6 +101,9 @@ export default function DeliveryAreaPage({ token, storeId }) {
       .then(d => {
         setAddress(d.delivery?.address || '');
         setDeliveryTime(d.delivery?.delivery_time != null ? String(d.delivery.delivery_time) : '');
+        if (d.delivery?.default_fee != null) {
+          setDefaultFee((d.delivery.default_fee / 100).toFixed(2));
+        }
         if (d.delivery?.zones?.length) {
           setZones(d.delivery.zones);
         } else if (d.delivery?.cities?.length) {
@@ -134,6 +139,7 @@ export default function DeliveryAreaPage({ token, storeId }) {
         delivery: {
           address,
           delivery_time: deliveryTime !== '' ? Number(deliveryTime) : null,
+          default_fee: defaultFee !== '' ? Math.round(Number(defaultFee) * 100) : 500,
           zones,
           cities: zones.map(z => ({ name: z.name, fee: z.fee, neighborhoods: [] })),
         },
@@ -146,7 +152,8 @@ export default function DeliveryAreaPage({ token, storeId }) {
   function addOrUpdateZone() {
     if (!newName) return;
     if (zoneType === 'circle' && !newRadius) return;
-    const fee = newFee !== '' ? Math.round(Number(newFee) * 100) : 0;
+    const fee       = newFee       !== '' ? Math.round(Number(newFee)       * 100) : 0;
+    const driverFee = newDriverFee !== '' ? Math.round(Number(newDriverFee) * 100) : 0;
     const color = editId
       ? zones.find(z => z.id === editId)?.color || ZONE_COLORS[zones.length % ZONE_COLORS.length]
       : ZONE_COLORS[zones.length % ZONE_COLORS.length];
@@ -154,18 +161,18 @@ export default function DeliveryAreaPage({ token, storeId }) {
     if (editId) {
       setZones(prev => prev.map(z => z.id === editId
         ? zoneType === 'circle'
-          ? { ...z, name: newName, type: 'circle', radiusKm: Number(newRadius), fee }
-          : { ...z, name: newName, type: 'polygon', points: draftPts, fee }
+          ? { ...z, name: newName, type: 'circle', radiusKm: Number(newRadius), fee, driverFee }
+          : { ...z, name: newName, type: 'polygon', points: draftPts, fee, driverFee }
         : z
       ));
       setEditId(null);
     } else {
       const zone = zoneType === 'circle'
-        ? { id: genId(), name: newName, type: 'circle', radiusKm: Number(newRadius), fee, color }
-        : { id: genId(), name: newName, type: 'polygon', points: draftPts, fee, color };
+        ? { id: genId(), name: newName, type: 'circle', radiusKm: Number(newRadius), fee, driverFee, color }
+        : { id: genId(), name: newName, type: 'polygon', points: draftPts, fee, driverFee, color };
       setZones(prev => [...prev, zone]);
     }
-    setNewName(''); setNewRadius(''); setNewFee('');
+    setNewName(''); setNewRadius(''); setNewFee(''); setNewDriverFee('');
     setDraftPts([]); setDrawing(false);
   }
 
@@ -175,12 +182,13 @@ export default function DeliveryAreaPage({ token, storeId }) {
     setNewName(z.name);
     setNewRadius(z.type === 'circle' ? String(z.radiusKm) : '');
     setNewFee(z.fee > 0 ? (z.fee / 100).toFixed(2) : '');
+    setNewDriverFee(z.driverFee > 0 ? (z.driverFee / 100).toFixed(2) : '');
     if (z.type === 'polygon') setDraftPts(z.points || []);
   }
 
   function cancelEdit() {
     setEditId(null); setDrawing(false); setDraftPts([]);
-    setNewName(''); setNewRadius(''); setNewFee('');
+    setNewName(''); setNewRadius(''); setNewFee(''); setNewDriverFee('');
   }
 
   // Polygon drawing handlers
@@ -224,11 +232,11 @@ export default function DeliveryAreaPage({ token, storeId }) {
 
   return (
     <>
-      {/* Address + time */}
+      {/* Address + time + default fee */}
       <div className="adm-card">
         <div className="adm-card-header"><h3>📍 Endereço da Loja</h3></div>
-        <div className="adm-card-body" style={{ display: 'flex', gap: 12, alignItems: 'flex-end' }}>
-          <div style={{ flex: 1 }}>
+        <div className="adm-card-body" style={{ display: 'flex', gap: 12, alignItems: 'flex-end', flexWrap: 'wrap' }}>
+          <div style={{ flex: 1, minWidth: 200 }}>
             <label className="adm-label">Endereço completo</label>
             <input className="adm-input" placeholder="Ex: Rua das Flores, 123, Centro, São Paulo - SP"
               value={address} onChange={e => setAddress(e.target.value)} />
@@ -238,6 +246,17 @@ export default function DeliveryAreaPage({ token, storeId }) {
             <input className="adm-input" type="number" min="1" placeholder="45"
               value={deliveryTime} onChange={e => setDeliveryTime(e.target.value)} style={{ width: 120 }} />
           </div>
+          <div style={{ flexShrink: 0 }}>
+            <label className="adm-label">
+              Taxa base (R$)
+              <span style={{ marginLeft: 6, fontSize: 11, color: '#9ca3af', fontWeight: 400 }}>fora das zonas</span>
+            </label>
+            <input className="adm-input" type="number" step="0.01" min="0" placeholder="5.00"
+              value={defaultFee} onChange={e => setDefaultFee(e.target.value)} style={{ width: 110 }} />
+          </div>
+        </div>
+        <div style={{ padding: '0 16px 12px', fontSize: 12, color: '#9ca3af' }}>
+          💡 A taxa base é cobrada quando o endereço do cliente está fora das zonas ou não foi possível localizá-lo.
         </div>
       </div>
 
@@ -339,6 +358,7 @@ export default function DeliveryAreaPage({ token, storeId }) {
                       {z.name}
                       {z.type === 'circle' ? ` — ${z.radiusKm}km` : ' — personalizado'}
                       {' — '}{fmtFee(z.fee)}
+                      {z.driverFee > 0 && <span style={{ color: '#1d4ed8' }}> · 🏍️ {fmtFee(z.driverFee)}</span>}
                     </span>
                   </div>
                 ))}
@@ -359,7 +379,8 @@ export default function DeliveryAreaPage({ token, storeId }) {
                     <th style={{ padding: '8px 16px', textAlign: 'left', fontWeight: 600, color: '#6b7280' }}>Zona</th>
                     <th style={{ padding: '8px 16px', textAlign: 'center', fontWeight: 600, color: '#6b7280' }}>Tipo</th>
                     <th style={{ padding: '8px 16px', textAlign: 'center', fontWeight: 600, color: '#6b7280' }}>Área</th>
-                    <th style={{ padding: '8px 16px', textAlign: 'center', fontWeight: 600, color: '#6b7280' }}>Taxa</th>
+                    <th style={{ padding: '8px 16px', textAlign: 'center', fontWeight: 600, color: '#6b7280' }}>Taxa cliente</th>
+                    <th style={{ padding: '8px 16px', textAlign: 'center', fontWeight: 600, color: '#6b7280' }}>Comissão entregador</th>
                     <th style={{ padding: '8px 16px', textAlign: 'center', fontWeight: 600, color: '#6b7280' }}>Ações</th>
                   </tr>
                 </thead>
@@ -391,6 +412,15 @@ export default function DeliveryAreaPage({ token, storeId }) {
                           padding: '2px 8px', borderRadius: 6, fontWeight: 600, fontSize: 12,
                         }}>
                           {fmtFee(z.fee)}
+                        </span>
+                      </td>
+                      <td style={{ padding: '10px 16px', textAlign: 'center' }}>
+                        <span style={{
+                          background: !z.driverFee ? '#f9fafb' : '#eff6ff',
+                          color: !z.driverFee ? '#9ca3af' : '#1d4ed8',
+                          padding: '2px 8px', borderRadius: 6, fontWeight: 600, fontSize: 12,
+                        }}>
+                          {z.driverFee > 0 ? fmtFee(z.driverFee) : '—'}
                         </span>
                       </td>
                       <td style={{ padding: '10px 16px', textAlign: 'center' }}>
@@ -471,10 +501,20 @@ export default function DeliveryAreaPage({ token, storeId }) {
                 </div>
               )}
 
-              <div style={{ width: 120 }}>
-                <label style={{ fontSize: 11, color: '#6b7280', display: 'block', marginBottom: 4 }}>Taxa (R$)</label>
+              <div style={{ width: 130 }}>
+                <label style={{ fontSize: 11, color: '#6b7280', display: 'block', marginBottom: 4 }}>
+                  Taxa cliente (R$)
+                </label>
                 <input className="adm-input" type="number" step="0.01" placeholder="0 = Grátis"
                   value={newFee} onChange={e => setNewFee(e.target.value)} style={{ marginBottom: 0 }} />
+              </div>
+
+              <div style={{ width: 150 }}>
+                <label style={{ fontSize: 11, color: '#1d4ed8', display: 'block', marginBottom: 4, fontWeight: 600 }}>
+                  🏍️ Comissão entregador (R$)
+                </label>
+                <input className="adm-input" type="number" step="0.01" placeholder="0.00"
+                  value={newDriverFee} onChange={e => setNewDriverFee(e.target.value)} style={{ marginBottom: 0 }} />
               </div>
 
               <div style={{ display: 'flex', gap: 8 }}>
