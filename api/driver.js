@@ -36,7 +36,7 @@ export default async function handler(req, res) {
       .from('drivers')
       .select('id,name,phone,store_id,active')
       .eq('login', login.trim())
-      .eq('password', password)
+      .eq('password', password.trim())
       .eq('active', true)
       .maybeSingle();
 
@@ -295,7 +295,7 @@ export default async function handler(req, res) {
       if (exists) return res.status(409).json({ error: 'Login já em uso' });
       const { data, error } = await sb().from('drivers').insert({
         store_id: storeId, name, phone: phone || null,
-        email: email || null, login: login.trim(), password, pin: login.trim(),
+        email: email || null, login: login.trim(), password: password.trim(), pin: login.trim(), active: true,
       }).select().single();
       if (error) return res.status(500).json({ error: error.message });
       return res.status(201).json({ driver: data });
