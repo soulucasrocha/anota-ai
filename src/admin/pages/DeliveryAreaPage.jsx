@@ -76,6 +76,7 @@ export default function DeliveryAreaPage({ token, storeId }) {
   const [defaultDriverFee, setDefaultDriverFee] = useState('0.00'); // taxa base entregador (fora das zonas)
   const [zones,        setZones]        = useState([]);
   const [storePos,     setStorePos]     = useState(null);
+  const [pinnedManually, setPinnedManually] = useState(false); // user dragged pin
   const [geocoding,    setGeocoding]    = useState(false);
   const [saving,       setSaving]       = useState(false);
   const [saved,        setSaved]        = useState(false);
@@ -108,6 +109,10 @@ export default function DeliveryAreaPage({ token, storeId }) {
         if (d.delivery?.default_driver_fee != null) {
           setDefaultDriverFee((d.delivery.default_driver_fee / 100).toFixed(2));
         }
+        if (d.delivery?.store_lat && d.delivery?.store_lng) {
+          setStorePos([d.delivery.store_lat, d.delivery.store_lng]);
+          setPinnedManually(true);
+        }
         if (d.delivery?.zones?.length) {
           setZones(d.delivery.zones);
         } else if (d.delivery?.cities?.length) {
@@ -122,9 +127,10 @@ export default function DeliveryAreaPage({ token, storeId }) {
       .catch(() => {});
   }, [token, storeId]);
 
-  // Geocode
+  // Geocode — skip when admin already dragged the pin manually
   useEffect(() => {
     if (!address || address.length < 6) return;
+    if (pinnedManually) return;
     const t = setTimeout(async () => {
       setGeocoding(true);
       const pos = await geocodeAddress(address);
@@ -132,7 +138,7 @@ export default function DeliveryAreaPage({ token, storeId }) {
       setGeocoding(false);
     }, 800);
     return () => clearTimeout(t);
-  }, [address]);
+  }, [address, pinnedManually]);
 
   async function save() {
     setSaving(true);
@@ -147,6 +153,7 @@ export default function DeliveryAreaPage({ token, storeId }) {
           default_driver_fee: defaultDriverFee !== '' ? Math.round(Number(defaultDriverFee) * 100) : 0,
           zones,
           cities: zones.map(z => ({ name: z.name, fee: z.fee, neighborhoods: [] })),
+          ...(storePos ? { store_lat: storePos[0], store_lng: storePos[1] } : {}),
         },
       }),
     });
@@ -277,9 +284,23 @@ export default function DeliveryAreaPage({ token, storeId }) {
       <div className="adm-card">
         <div className="adm-card-header">
           <h3>🗺️ Zonas de Entrega</h3>
-          <span style={{ fontSize: 12, color: '#aaa' }}>
-            {geocoding ? '🔍 Localizando...' : storePos ? '📍 Loja localizada' : 'Configure o endereço acima'}
-          </span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <span style={{ fontSize: 12, color: pinnedManually ? '#10b981' : '#aaa' }}>
+              {geocoding
+                ? '🔍 Localizando...'
+                : storePos
+                  ? (pinnedManually ? '📍 Posição ajustada manualmente' : '📍 Loja localizada · arraste o pino para ajustar')
+                  : 'Configure o endereço acima'}
+            </span>
+            {pinnedManually && (
+              <button
+                onClick={() => setPinnedManually(false)}
+                title="Remove o pino manual e re-geolocaliza pelo endereço"
+                style={{ fontSize: 11, color: '#6b7280', background: 'none', border: '1px solid #e5e7eb', borderRadius: 4, padding: '1px 6px', cursor: 'pointer' }}>
+                ↺ Re-geolocalizar
+              </button>
+            )}
+          </div>
         </div>
         <div className="adm-card-body" style={{ padding: 0 }}>
 
@@ -320,10 +341,20 @@ export default function DeliveryAreaPage({ token, storeId }) {
               {storePos && <MapReCenter pos={storePos} />}
               <DrawHandler drawing={drawing} onMapClick={handleMapClick} onDblClick={finishPolygon} />
 
-              {/* Store marker */}
+              {/* Store marker — draggable to manually correct position */}
               {storePos && (
-                <Marker position={storePos}>
-                  <Popup>📍 Sua loja</Popup>
+                <Marker
+                  position={storePos}
+                  draggable={true}
+                  eventHandlers={{
+                    dragend: (e) => {
+                      const { lat, lng } = e.target.getLatLng();
+                      setStorePos([lat, lng]);
+                      setPinnedManually(true);
+                    },
+                  }}
+                >
+                  <Popup>📍 Sua loja — arraste para ajustar a posição exata</Popup>
                 </Marker>
               )}
 

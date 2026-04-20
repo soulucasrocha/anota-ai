@@ -151,7 +151,7 @@ export default function OrdersMap({ orders, token, storeId, storeLogoUrl }) {
   const [drivers,     setDrivers]     = useState([]);
   const [geocoding,   setGeocoding]   = useState(false);
 
-  /* 1. Fetch + geocode store address for centering */
+  /* 1. Fetch store position — use saved manual pin if available, else geocode */
   useEffect(() => {
     if (!storeId) return;
     fetch(`/api/admin-products?type=delivery&storeId=${storeId}`, {
@@ -159,6 +159,12 @@ export default function OrdersMap({ orders, token, storeId, storeLogoUrl }) {
     })
       .then(r => r.json())
       .then(async d => {
+        // Prefer manually pinned coordinates (dragged in DeliveryAreaPage)
+        if (d.delivery?.store_lat && d.delivery?.store_lng) {
+          setStoreCoords({ lat: d.delivery.store_lat, lng: d.delivery.store_lng });
+          return;
+        }
+        // Fallback: geocode from address
         const addr = d.delivery?.address;
         if (!addr) return;
         const c = await geocodeAddress(addr);
