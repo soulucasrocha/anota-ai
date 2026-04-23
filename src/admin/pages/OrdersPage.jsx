@@ -79,7 +79,7 @@ function OrderTimer({ createdAt, deliveryMinutes }) {
 
 function applyBotVars(template, order) {
   const nome   = order.customer?.name || '';
-  const pedido = String(order.id).slice(-6);
+  const pedido = order.daily_number ? String(order.daily_number) : String(order.id).slice(-6);
   const total  = 'R$ ' + ((order.total || 0) / 100).toFixed(2).replace('.', ',');
   return template.replace(/\{\{nome\}\}/g, nome).replace(/\{\{pedido\}\}/g, pedido).replace(/\{\{total\}\}/g, total);
 }
@@ -175,7 +175,7 @@ function OrderCard({ order, token, storeId, onMoved, onFinalized, col, autoPrint
     {cancelOpen && (
       <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.45)', zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
         <div style={{ background: '#fff', borderRadius: 16, padding: 24, width: '100%', maxWidth: 400, boxShadow: '0 8px 32px rgba(0,0,0,0.18)' }}>
-          <h3 style={{ margin: '0 0 4px', fontSize: 16, color: '#1e2740' }}>Cancelar pedido #{String(order.id).slice(-6)}</h3>
+          <h3 style={{ margin: '0 0 4px', fontSize: 16, color: '#1e2740' }}>Cancelar pedido #{order.daily_number || String(order.id).slice(-6)}</h3>
           <p style={{ margin: '0 0 14px', fontSize: 13, color: '#6b7280' }}>Cliente: {order.customer?.name || '—'}</p>
           <label style={{ fontSize: 13, fontWeight: 600, color: '#374151', display: 'block', marginBottom: 6 }}>
             Motivo do cancelamento <span style={{ fontWeight: 400, color: '#9ca3af' }}>(opcional)</span>
@@ -207,7 +207,7 @@ function OrderCard({ order, token, storeId, onMoved, onFinalized, col, autoPrint
     )}
     <div className="kanban-card" style={{ borderTop: `3px solid ${colDef?.color}` }}>
       <div className="kanban-card-header">
-        <span className="kanban-order-id">#{String(order.id).slice(-6)}</span>
+        <span className="kanban-order-id">#{order.daily_number || String(order.id).slice(-6)}</span>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           <span className="kanban-order-time">{fmtTime(order.created_at || order.createdAt)}</span>
           <button

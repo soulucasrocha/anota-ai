@@ -148,7 +148,18 @@ export default async function handler(req, res) {
       // Mine: assigned to this driver
       const mine      = enriched.filter(o => o.assignment?.driver_id === driverId);
 
-      return res.status(200).json({ available, mine });
+      // Fetch store position for map centering
+      const { data: stSettings } = await sb()
+        .from('store_settings')
+        .select('delivery')
+        .eq('store_id', storeId)
+        .maybeSingle();
+      const del = stSettings?.delivery || {};
+      const storePos = (del.store_lat && del.store_lng)
+        ? { lat: del.store_lat, lng: del.store_lng }
+        : null;
+
+      return res.status(200).json({ available, mine, storePos });
     }
 
     if (req.method === 'PATCH') {

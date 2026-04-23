@@ -269,6 +269,26 @@ export default function PrinterPage({ store }) {
         </div>
       </div>
 
+      {/* Numeração diária */}
+      <div className="adm-card">
+        <div className="adm-card-header"><h3>🔢 Numeração Diária de Pedidos</h3></div>
+        <div className="adm-card-body" style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+          <div style={{ background: '#f0fdf4', border: '1px solid #86efac', borderRadius: 10, padding: 14 }}>
+            <p style={{ fontWeight: 700, fontSize: 14, color: '#15803d', margin: '0 0 6px' }}>✅ Ativo automaticamente</p>
+            <p style={{ fontSize: 13, color: '#166534', margin: 0, lineHeight: 1.6 }}>
+              Todo pedido recebe um número sequencial que reinicia às <strong>00:00 (meia-noite)</strong> todo dia.
+              O primeiro pedido do dia é sempre o <strong>#1</strong>, o segundo <strong>#2</strong>, e assim por diante.
+            </p>
+          </div>
+          <div style={{ background: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: 10, padding: '10px 14px' }}>
+            <p style={{ fontSize: 13, color: '#1e40af', margin: 0 }}>
+              📋 O número aparece no <strong>kanban</strong>, na <strong>impressão</strong> e no <strong>app do entregador</strong>.
+              Pedidos antigos continuam com o código original.
+            </p>
+          </div>
+        </div>
+      </div>
+
       {/* Teste */}
       <div className="adm-card">
         <div className="adm-card-header"><h3>🧪 Teste de Impressão</h3></div>

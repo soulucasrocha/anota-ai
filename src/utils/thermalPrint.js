@@ -128,7 +128,7 @@ function buildPrintHTML(order, paperWidth = 300, fontSize = 'normal') {
     card_delivery: 'Cartao na Entrega', pix_delivery: 'PIX na Entrega', cash: 'Dinheiro',
   };
   const lines = [
-    `<center><b>PEDIDO #${String(order.id).slice(-6)}</b></center>`,
+    `<center><b>PEDIDO #${order.daily_number || String(order.id).slice(-6)}</b></center>`,
     `<center>${now}</center>`,
     `<hr/>`,
     `<b>Cliente:</b> ${order.customer?.name || '—'}<br/>`,
@@ -180,7 +180,7 @@ function buildEscPos(order, fontSize = 'normal') {
 
   add(ESC + 'a\x01');                    // center
   add(ESC + 'E\x01');                    // bold on
-  add(`PEDIDO #${String(order.id).slice(-6)}` + LF);
+  add(`PEDIDO #${order.daily_number || String(order.id).slice(-6)}` + LF);
   add(ESC + 'E\x00');                    // bold off
   add(now + LF);
   add(ESC + 'a\x00');                    // left align

@@ -63,6 +63,23 @@ export default async function handler(req, res) {
   const isDeliveryPay = deliveryPayment === true || ['card_delivery', 'pix_delivery', 'cash'].includes(paymentMethod);
   const resolvedStatus = status || (isDeliveryPay ? 'pending' : 'paid');
   const kanbanStatus = (resolvedStatus === 'paid' && !isDeliveryPay) ? 'preparing' : 'pending';
+
+  // ── Numeração diária (reinicia todo dia à meia-noite BRT = UTC-3) ──────────
+  let dailyNumber = null;
+  if (storeId) {
+    const nowBr      = new Date(Date.now() - 3 * 60 * 60 * 1000);
+    const todayBr    = nowBr.toISOString().slice(0, 10); // "YYYY-MM-DD" em BRT
+    const dayStart   = new Date(`${todayBr}T03:00:00.000Z`); // 00:00 BRT = 03:00 UTC
+    const dayEnd     = new Date(dayStart.getTime() + 24 * 60 * 60 * 1000);
+    const { count }  = await sb()
+      .from('orders')
+      .select('id', { count: 'exact', head: true })
+      .eq('store_id', storeId)
+      .gte('created_at', dayStart.toISOString())
+      .lt('created_at', dayEnd.toISOString());
+    dailyNumber = (count || 0) + 1;
+  }
+
   const order = {
     id: pixId || `ord-${Date.now()}`,
     store_id: storeId || null,
@@ -80,6 +97,7 @@ export default async function handler(req, res) {
     driver_commission: driver_commission || 0,
     change_for: changeFor || null,
     change_note: changeNote || null,
+    daily_number: dailyNumber,
     hashtag: waTag,
     wa_tag: waTag,
     wa_name: waName,

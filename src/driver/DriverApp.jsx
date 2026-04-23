@@ -113,7 +113,7 @@ function HistoryCard({ order }) {
     <div className="drv-hist-card">
       {/* Top: ID + time */}
       <div className="drv-hist-card-top">
-        <span className="drv-hist-id">#{String(order.id).slice(-6)}</span>
+        <span className="drv-hist-id">#{orderNum(order)}</span>
         <span className="drv-hist-time">{fmtTime(order.delivered_at || order.created_at)}</span>
         <span style={{ fontSize: 11, background: '#d1fae5', color: '#065f46', fontWeight: 700, padding: '2px 7px', borderRadius: 99 }}>✅ Entregue</span>
       </div>
@@ -178,7 +178,9 @@ function buildMapsUrl(addresses) {
 }
 
 // ── Order card ─────────────────────────────────────────────────────────────────
-function OrderCard({ order, mode, onAction, loading, activeAddresses, gpsPos }) {
+function orderNum(order) { return order.daily_number ? String(order.daily_number) : String(order.id).slice(-6); }
+
+function OrderCard({ order, mode, onAction, loading, activeAddresses, gpsPos, storePos }) {
   const [expanded, setExpanded] = useState(false);
   const items      = order.items || [];
   const customer   = order.customer || {};
@@ -199,7 +201,7 @@ function OrderCard({ order, mode, onAction, loading, activeAddresses, gpsPos }) 
       {/* ── Top row: ID + time + status ── */}
       <div className="drv-card-top" style={{ cursor: 'default' }}>
         <div>
-          <span className="drv-card-id">#{String(order.id).slice(-6)}</span>
+          <span className="drv-card-id">#{orderNum(order)}</span>
           <span className="drv-card-time">{fmtTime(order.created_at)}</span>
           {mode === 'mine' && (
             <span className={'drv-status-badge drv-st-' + (assignSt || 'assigned')}>
@@ -211,7 +213,7 @@ function OrderCard({ order, mode, onAction, loading, activeAddresses, gpsPos }) 
 
       {/* ── Mapa de rota (apenas em Disponíveis) ── */}
       {mode === 'available' && order.address && (
-        <MiniRouteMap address={order.address} gpsPos={gpsPos} />
+        <MiniRouteMap address={order.address} gpsPos={gpsPos} storePos={storePos} />
       )}
 
       {/* ── Comissão — always visible ── */}
@@ -324,6 +326,7 @@ export default function DriverApp({ storeId }) {
   const [acting,    setActing]    = useState(null); // orderId being acted on
   const [gpsOk,     setGpsOk]     = useState(null); // null=unknown, true=ok, false=denied
   const [gpsPos,    setGpsPos]    = useState(null); // { lat, lng }
+  const [storePos,  setStorePos]  = useState(null); // { lat, lng } — posição da loja
 
   function handleLogin(t, d) {
     localStorage.setItem('drv_token', t);
@@ -385,6 +388,7 @@ export default function DriverApp({ storeId }) {
       const d = await r.json();
       setAvailable(d.available || []);
       setMine(d.mine || []);
+      if (d.storePos) setStorePos(d.storePos);
     } catch {}
   }, [token]);
 
@@ -476,6 +480,7 @@ export default function DriverApp({ storeId }) {
                   onAction={handleAction}
                   loading={acting === o.id}
                   gpsPos={gpsPos}
+                  storePos={storePos}
                 />
               ))
             }
@@ -486,7 +491,7 @@ export default function DriverApp({ storeId }) {
             {/* Mapa de todas as entregas ativas */}
             {(activeOrders.length > 0 || doneOrders.length > 0) && (
               <div style={{ marginBottom: 14 }}>
-                <DriverMap orders={mine} gpsPos={gpsPos} />
+                <DriverMap orders={mine} gpsPos={gpsPos} storePos={storePos} />
               </div>
             )}
             {activeOrders.length === 0 && doneOrders.length === 0

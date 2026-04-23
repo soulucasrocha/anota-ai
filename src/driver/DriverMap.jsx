@@ -148,7 +148,7 @@ function FitRoute({ points }) {
 }
 
 /* ── Mini mapa de rota — usado nos cards "Disponíveis" ───────────────────── */
-export function MiniRouteMap({ address, gpsPos }) {
+export function MiniRouteMap({ address, gpsPos, storePos }) {
   const [dest,      setDest]      = useState(null);
   const [geocoding, setGeocoding] = useState(false);
 
@@ -166,7 +166,9 @@ export function MiniRouteMap({ address, gpsPos }) {
 
   const center = dest
     ? [dest.lat, dest.lng]
-    : gpsPos ? [gpsPos.lat, gpsPos.lng] : [-15.7942, -47.8825];
+    : gpsPos    ? [gpsPos.lat, gpsPos.lng]
+    : storePos  ? [storePos.lat, storePos.lng]
+    : [-22.8083, -43.4394];
 
   const dist = gpsPos && dest ? calcDistance(gpsPos, dest) : null;
 
@@ -232,7 +234,7 @@ export function MiniRouteMap({ address, gpsPos }) {
 }
 
 /* ── Main component ───────────────────────────────────────────────────────── */
-export default function DriverMap({ orders, gpsPos }) {
+export default function DriverMap({ orders, gpsPos, storePos }) {
   // only orders that are actively being delivered (accepted or picked up)
   const active = orders.filter(o => ['assigned', 'picked'].includes(o.assignment?.status));
 
@@ -264,7 +266,11 @@ export default function DriverMap({ orders, gpsPos }) {
 
   const gpsPoint  = gpsPos ? [[gpsPos.lat, gpsPos.lng]] : [];
   const allPoints = [...orderPoints, ...gpsPoint];
-  const initCenter = gpsPos ? [gpsPos.lat, gpsPos.lng] : [-15.7942, -47.8825];
+  // Centro: GPS próprio > posição da loja > Mesquita/RJ (fallback)
+  const initCenter = gpsPos
+    ? [gpsPos.lat, gpsPos.lng]
+    : storePos ? [storePos.lat, storePos.lng]
+    : [-22.8083, -43.4394];
 
   return (
     <div style={{ borderRadius: 14, overflow: 'hidden', border: '1.5px solid #e5e7eb', position: 'relative', boxShadow: '0 2px 10px rgba(0,0,0,.07)' }}>
