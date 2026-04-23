@@ -131,10 +131,10 @@ body:has(.drv-login) {
 }
 .drv-tab {
   flex: 1;
-  padding: 12px 6px;
+  padding: 14px 8px;
   border: none;
   background: transparent;
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 600;
   color: var(--drv-muted);
   cursor: pointer;
@@ -142,9 +142,8 @@ body:has(.drv-login) {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 4px;
+  gap: 6px;
   transition: color 0.15s;
-  white-space: nowrap;
 }
 .drv-tab.active { color: var(--drv-red); }
 .drv-tab.active::after {

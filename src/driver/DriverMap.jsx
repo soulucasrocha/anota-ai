@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
+import { MapContainer, TileLayer, Marker, Popup, Polyline, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 
@@ -99,6 +99,136 @@ function CenterOnGps({ pos }) {
     map.setView([pos.lat, pos.lng], 14);
   }, [pos]);
   return null;
+}
+
+/* ── Distância em linha reta (Haversine) ─────────────────────────────────── */
+function calcDistance(a, b) {
+  const R = 6371;
+  const dLat = (b.lat - a.lat) * Math.PI / 180;
+  const dLng = (b.lng - a.lng) * Math.PI / 180;
+  const x =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos(a.lat * Math.PI / 180) * Math.cos(b.lat * Math.PI / 180) *
+    Math.sin(dLng / 2) ** 2;
+  return (R * 2 * Math.atan2(Math.sqrt(x), Math.sqrt(1 - x))).toFixed(1);
+}
+
+/* ── Destino (vermelho) ──────────────────────────────────────────────────── */
+function destIcon() {
+  return L.divIcon({
+    className: '',
+    iconSize:   [36, 44],
+    iconAnchor: [18, 44],
+    html: `
+      <div style="text-align:center">
+        <div style="
+          width:30px;height:30px;border-radius:50%;
+          background:#e53935;
+          display:flex;align-items:center;justify-content:center;
+          box-shadow:0 3px 8px rgba(229,57,53,.45);
+          font-size:15px;border:3px solid #fff;
+        ">📦</div>
+        <div style="width:0;height:0;margin:0 auto;border-left:6px solid transparent;border-right:6px solid transparent;border-top:8px solid #e53935"></div>
+      </div>`,
+  });
+}
+
+/* ── Ajusta zoom para encaixar rota ─────────────────────────────────────── */
+function FitRoute({ points }) {
+  const map  = useMap();
+  const prev = useRef('');
+  useEffect(() => {
+    if (points.length < 2) return;
+    const key = points.map(p => `${p[0].toFixed(3)},${p[1].toFixed(3)}`).join('|');
+    if (key === prev.current) return;
+    prev.current = key;
+    map.fitBounds(L.latLngBounds(points), { padding: [32, 32], maxZoom: 15 });
+  }, [points]);
+  return null;
+}
+
+/* ── Mini mapa de rota — usado nos cards "Disponíveis" ───────────────────── */
+export function MiniRouteMap({ address, gpsPos }) {
+  const [dest,      setDest]      = useState(null);
+  const [geocoding, setGeocoding] = useState(false);
+
+  useEffect(() => {
+    if (!address) return;
+    const key = address.trim().toLowerCase();
+    if (key in GEO_CACHE) { setDest(GEO_CACHE[key]); return; }
+    setGeocoding(true);
+    geocodeAddress(address).then(c => { setDest(c); setGeocoding(false); });
+  }, [address]);
+
+  const routePoints = gpsPos && dest
+    ? [[gpsPos.lat, gpsPos.lng], [dest.lat, dest.lng]]
+    : dest ? [[dest.lat, dest.lng]] : [];
+
+  const center = dest
+    ? [dest.lat, dest.lng]
+    : gpsPos ? [gpsPos.lat, gpsPos.lng] : [-15.7942, -47.8825];
+
+  const dist = gpsPos && dest ? calcDistance(gpsPos, dest) : null;
+
+  return (
+    <div style={{ borderRadius: 10, overflow: 'hidden', border: '1.5px solid #dbeafe', margin: '8px 0', position: 'relative' }}>
+      {/* Distância badge */}
+      {dist && (
+        <div style={{
+          position: 'absolute', bottom: 8, left: '50%', transform: 'translateX(-50%)',
+          zIndex: 1000, background: 'rgba(30,39,64,.88)', color: '#fff',
+          borderRadius: 20, padding: '4px 12px', fontSize: 12, fontWeight: 700,
+          whiteSpace: 'nowrap', pointerEvents: 'none',
+        }}>
+          📍 {dist} km até a entrega
+        </div>
+      )}
+      {geocoding && (
+        <div style={{
+          position: 'absolute', top: 6, left: 6, zIndex: 1000,
+          background: 'rgba(30,39,64,.85)', color: '#fbbf24',
+          borderRadius: 6, padding: '3px 8px', fontSize: 11, fontWeight: 700,
+          pointerEvents: 'none',
+        }}>
+          ⏳ Localizando...
+        </div>
+      )}
+
+      <MapContainer
+        center={center}
+        zoom={13}
+        style={{ height: 180, width: '100%' }}
+        scrollWheelZoom={false}
+        zoomControl={false}
+        attributionControl={false}
+      >
+        <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
+        {routePoints.length >= 2 && <FitRoute points={routePoints} />}
+
+        {/* Posição do entregador */}
+        {gpsPos && (
+          <Marker position={[gpsPos.lat, gpsPos.lng]} icon={myPosIcon()}>
+            <Popup>🏍️ Você está aqui</Popup>
+          </Marker>
+        )}
+
+        {/* Destino da entrega */}
+        {dest && (
+          <Marker position={[dest.lat, dest.lng]} icon={destIcon()}>
+            <Popup>📦 {address}</Popup>
+          </Marker>
+        )}
+
+        {/* Linha de rota */}
+        {routePoints.length === 2 && (
+          <Polyline
+            positions={routePoints}
+            pathOptions={{ color: '#3b82f6', weight: 3, opacity: 0.75, dashArray: '9 6' }}
+          />
+        )}
+      </MapContainer>
+    </div>
+  );
 }
 
 /* ── Main component ───────────────────────────────────────────────────────── */

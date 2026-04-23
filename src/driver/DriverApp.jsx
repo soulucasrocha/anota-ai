@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import './driver.css';
-import DriverMap from './DriverMap';
+import DriverMap, { MiniRouteMap } from './DriverMap';
 
 function fmtMoney(cents) { return 'R$ ' + (cents / 100).toFixed(2).replace('.', ','); }
 function fmtTime(iso) {
@@ -178,7 +178,7 @@ function buildMapsUrl(addresses) {
 }
 
 // ── Order card ─────────────────────────────────────────────────────────────────
-function OrderCard({ order, mode, onAction, loading, activeAddresses }) {
+function OrderCard({ order, mode, onAction, loading, activeAddresses, gpsPos }) {
   const [expanded, setExpanded] = useState(false);
   const items      = order.items || [];
   const customer   = order.customer || {};
@@ -208,6 +208,11 @@ function OrderCard({ order, mode, onAction, loading, activeAddresses }) {
           )}
         </div>
       </div>
+
+      {/* ── Mapa de rota (apenas em Disponíveis) ── */}
+      {mode === 'available' && order.address && (
+        <MiniRouteMap address={order.address} gpsPos={gpsPos} />
+      )}
 
       {/* ── Comissão — always visible ── */}
       {commission != null && (
@@ -450,13 +455,6 @@ export default function DriverApp({ storeId }) {
           {activeOrders.length > 0 && <span className="drv-tab-badge drv-badge-mine">{activeOrders.length}</span>}
         </button>
         <button
-          className={'drv-tab' + (tab === 'map' ? ' active' : '')}
-          onClick={() => setTab('map')}
-        >
-          🗺️ Mapa
-          {activeOrders.length > 0 && <span className="drv-tab-badge drv-badge-mine">{activeOrders.length}</span>}
-        </button>
-        <button
           className={'drv-tab' + (tab === 'history' ? ' active' : '')}
           onClick={() => setTab('history')}
         >
@@ -477,6 +475,7 @@ export default function DriverApp({ storeId }) {
                   mode="available"
                   onAction={handleAction}
                   loading={acting === o.id}
+                  gpsPos={gpsPos}
                 />
               ))
             }
@@ -484,6 +483,12 @@ export default function DriverApp({ storeId }) {
         )}
         {tab === 'mine' && (
           <>
+            {/* Mapa de todas as entregas ativas */}
+            {(activeOrders.length > 0 || doneOrders.length > 0) && (
+              <div style={{ marginBottom: 14 }}>
+                <DriverMap orders={mine} gpsPos={gpsPos} />
+              </div>
+            )}
             {activeOrders.length === 0 && doneOrders.length === 0
               ? <div className="drv-empty">Você ainda não aceitou nenhum pedido</div>
               : null
@@ -500,10 +505,6 @@ export default function DriverApp({ storeId }) {
               </>
             )}
           </>
-        )}
-
-        {tab === 'map' && (
-          <DriverMap orders={mine} gpsPos={gpsPos} />
         )}
 
         {tab === 'history' && (
