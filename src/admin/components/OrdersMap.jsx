@@ -41,10 +41,10 @@ const STATUS = {
 };
 
 /* ── Custom icons ─────────────────────────────────────────────────────────── */
-function orderIcon(orderId, status) {
+function orderIcon(label, status) {
   const cfg   = STATUS[status] || STATUS.pending;
   const color = cfg.color;
-  const id    = String(orderId).slice(-4);
+  const id    = String(label);
 
   return L.divIcon({
     className: '',
@@ -324,11 +324,11 @@ export default function OrdersMap({ orders, token, storeId, storeLogoUrl }) {
           const st = o.kanban_status || o.kanbanStatus || 'pending';
           const cfg = STATUS[st] || STATUS.pending;
           return (
-            <Marker key={o.id} position={[c.lat, c.lng]} icon={orderIcon(o.id, st)}>
+            <Marker key={o.id} position={[c.lat, c.lng]} icon={orderIcon(o.daily_number || String(o.id).slice(-6), st)}>
               <Popup>
                 <div style={{ fontSize: 13, minWidth: 170 }}>
                   <div style={{ fontWeight: 800, fontSize: 14, marginBottom: 4 }}>
-                    #{String(o.id).slice(-6)}
+                    #{o.daily_number || String(o.id).slice(-6)}
                     <span style={{ marginLeft: 6, fontSize: 11, background: cfg.color, color: '#fff', padding: '2px 6px', borderRadius: 99 }}>
                       {cfg.emoji} {cfg.label}
                     </span>

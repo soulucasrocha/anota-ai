@@ -7,33 +7,72 @@ import 'leaflet/dist/leaflet.css';
 const GEO_CACHE = {};
 let lastGeoTs = 0;
 
-async function geocodeAddress(address) {
+async function geocodeAddress(address, nearPos = null) {
   if (!address) return null;
-  const key = address.trim().toLowerCase();
+  const near = nearPos || { lat: -22.8083, lng: -43.4394 }; // fallback: Mesquita/RJ
+  const key  = address.trim().toLowerCase() + `|${near.lat.toFixed(2)},${near.lng.toFixed(2)}`;
   if (key in GEO_CACHE) return GEO_CACHE[key];
-  const wait = Math.max(0, 1100 - (Date.now() - lastGeoTs));
-  if (wait > 0) await new Promise(r => setTimeout(r, wait));
-  lastGeoTs = Date.now();
-  try {
-    const res = await fetch(
-      `https://nominatim.openstreetmap.org/search?format=json&limit=1&countrycodes=br&q=${encodeURIComponent(address)}`,
-      { headers: { 'Accept-Language': 'pt-BR,pt;q=0.9' } }
-    );
+
+  // ── Normaliza: split, remove vazios e DEDUPLICA partes repetidas ──────────
+  const rawParts = address.split(',').map(s => s.trim()).filter(Boolean);
+  const seen = new Set();
+  const parts = rawParts.filter(p => {
+    const k = p.toLowerCase();
+    if (seen.has(k)) return false;
+    seen.add(k);
+    return true;
+  });
+  const deduped = parts.join(', ');
+
+  async function tryFetch(query) {
+    const wait = Math.max(0, 1100 - (Date.now() - lastGeoTs));
+    if (wait > 0) await new Promise(r => setTimeout(r, wait));
+    lastGeoTs = Date.now();
+    let url = `https://nominatim.openstreetmap.org/search?format=json&limit=1&countrycodes=br&q=${encodeURIComponent(query)}`;
+    {
+      const d = 0.15; // ~16 km box em torno da loja
+      url += `&viewbox=${near.lng - d},${near.lat + d},${near.lng + d},${near.lat - d}&bounded=0`;
+    }
+    const res = await fetch(url, { headers: { 'Accept-Language': 'pt-BR,pt;q=0.9' } });
     const data = await res.json();
-    const c = data[0] ? { lat: parseFloat(data[0].lat), lng: parseFloat(data[0].lon) } : null;
-    GEO_CACHE[key] = c;
-    return c;
-  } catch {
-    GEO_CACHE[key] = null;
-    return null;
+    return data[0] ? { lat: parseFloat(data[0].lat), lng: parseFloat(data[0].lon) } : null;
   }
+
+  let c = null;
+  try {
+    // 1ª: endereço deduplicado
+    c = await tryFetch(deduped);
+
+    // 2ª: remove números após vírgula + adiciona RJ
+    if (!c) {
+      const noNum = deduped.replace(/,\s*\d+\b/g, '').replace(/,\s*$/, '').trim() + ', RJ';
+      c = await tryFetch(noNum);
+    }
+
+    // 3ª: apenas "rua, cidade, RJ"
+    if (!c && parts.length >= 2) {
+      c = await tryFetch(`${parts[0]}, ${parts[parts.length - 1]}, RJ`);
+    }
+
+    // 4ª: rua sem QUALQUER número (caso cliente digitou o número no nome da rua) + cidade + RJ
+    if (!c && parts.length >= 2) {
+      const streetNoNum = parts[0].replace(/\b\d+\b/g, '').trim();
+      const city = parts[parts.length - 1];
+      if (streetNoNum && streetNoNum !== parts[0]) {
+        c = await tryFetch(`${streetNoNum}, ${city}, RJ`);
+      }
+    }
+  } catch { /* erro de rede — c permanece null */ }
+
+  GEO_CACHE[key] = c;
+  return c;
 }
 
 /* ── Delivery flag icon ────────────────────────────────────────────────────── */
-function deliveryIcon(orderId, status) {
+function deliveryIcon(label, status) {
   const color = status === 'picked' ? '#8b5cf6' : '#2563eb';
   const emoji = status === 'picked' ? '🛵' : '📦';
-  const id    = String(orderId).slice(-6);
+  const id    = String(label);
   return L.divIcon({
     className: '',
     iconSize:   [90, 50],
@@ -124,7 +163,7 @@ function destIcon() {
         <div style="
           width:30px;height:30px;border-radius:50%;
           background:#e53935;
-          display:flex;align-items:center;justify-content:center;
+          display:inline-flex;align-items:center;justify-content:center;
           box-shadow:0 3px 8px rgba(229,57,53,.45);
           font-size:15px;border:3px solid #fff;
         ">📦</div>
@@ -154,11 +193,14 @@ export function MiniRouteMap({ address, gpsPos, storePos }) {
 
   useEffect(() => {
     if (!address) return;
-    const key = address.trim().toLowerCase();
-    if (key in GEO_CACHE) { setDest(GEO_CACHE[key]); return; }
+    let alive = true;
     setGeocoding(true);
-    geocodeAddress(address).then(c => { setDest(c); setGeocoding(false); });
-  }, [address]);
+    // storePos (or Mesquita fallback) is used inside geocodeAddress as the viewbox bias
+    geocodeAddress(address, storePos).then(c => {
+      if (alive) { setDest(c); setGeocoding(false); }
+    });
+    return () => { alive = false; };
+  }, [address, storePos]);
 
   const routePoints = gpsPos && dest
     ? [[gpsPos.lat, gpsPos.lng], [dest.lat, dest.lng]]
@@ -251,7 +293,7 @@ export default function DriverMap({ orders, gpsPos, storePos }) {
     (async () => {
       for (const o of todo) {
         if (!alive) break;
-        const c = await geocodeAddress(o.address);
+        const c = await geocodeAddress(o.address, storePos);
         if (alive) setCoords(prev => ({ ...prev, [String(o.id)]: c }));
       }
       if (alive) setGeocoding(false);
@@ -341,11 +383,11 @@ export default function DriverMap({ orders, gpsPos, storePos }) {
           if (!c) return null;
           const status = o.assignment?.status;
           return (
-            <Marker key={o.id} position={[c.lat, c.lng]} icon={deliveryIcon(o.id, status)}>
+            <Marker key={o.id} position={[c.lat, c.lng]} icon={deliveryIcon(o.daily_number || String(o.id).slice(-6), status)}>
               <Popup>
                 <div style={{ fontSize: 13, minWidth: 165 }}>
                   <div style={{ fontWeight: 800, fontSize: 14, marginBottom: 5 }}>
-                    #{String(o.id).slice(-6)}
+                    #{o.daily_number || String(o.id).slice(-6)}
                     <span style={{
                       marginLeft: 6, fontSize: 11,
                       background: status === 'picked' ? '#8b5cf6' : '#2563eb',

@@ -157,6 +157,12 @@ function HistoryCard({ order }) {
           )}
           {order.change_note && <p className="drv-change-note">💵 {order.change_note}</p>}
           <div className="drv-total-row">
+            <span>Pagamento</span>
+            <span style={{ fontWeight: 700, color: '#1d4ed8', fontSize: 13 }}>
+              {PM_LABELS[order.payment_method] || '—'}
+            </span>
+          </div>
+          <div className="drv-total-row" style={{ marginTop: 4 }}>
             <span>Total do pedido</span>
             <span className="drv-card-total">{fmtMoney(order.total || 0)}</span>
           </div>
