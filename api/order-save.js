@@ -9,10 +9,28 @@ export default async function handler(req, res) {
     const { pixId } = req.query;
     if (!pixId) return res.status(400).json({ error: 'missing pixId' });
     const { data: order } = await sb().from('orders')
-      .select('kanban_status, updated_at, created_at, address, customer, total, payment_method, delivery_payment')
+      .select('id, kanban_status, updated_at, created_at, address, customer, total, payment_method, delivery_payment')
       .or(`pix_id.eq.${pixId},id.eq.${pixId}`)
       .maybeSingle();
     if (!order) return res.status(200).json({ status: 'pending' });
+
+    // Buscar nome do entregador se houver assignment ativo
+    let driverName = null;
+    const { data: assignment } = await sb()
+      .from('order_assignments')
+      .select('driver_id, status')
+      .eq('order_id', String(order.id))
+      .in('status', ['assigned', 'picked'])
+      .maybeSingle();
+    if (assignment?.driver_id) {
+      const { data: drv } = await sb()
+        .from('drivers')
+        .select('name')
+        .eq('id', assignment.driver_id)
+        .maybeSingle();
+      driverName = drv?.name || null;
+    }
+
     return res.status(200).json({
       status: order.kanban_status || 'pending',
       updatedAt: order.updated_at || order.created_at,
@@ -21,6 +39,7 @@ export default async function handler(req, res) {
       total: order.total || 0,
       paymentMethod: order.payment_method || 'pix_online',
       deliveryPayment: order.delivery_payment || false,
+      driverName,
     });
   }
 

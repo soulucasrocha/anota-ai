@@ -180,6 +180,14 @@ function buildMapsUrl(addresses) {
 // ── Order card ─────────────────────────────────────────────────────────────────
 function orderNum(order) { return order.daily_number ? String(order.daily_number) : String(order.id).slice(-6); }
 
+const PM_LABELS = {
+  pix_online:    'PIX Online',
+  card_online:   'Cartão Online',
+  card_delivery: 'Cartão na Entrega',
+  pix_delivery:  'PIX na Entrega',
+  cash:          'Dinheiro',
+};
+
 function OrderCard({ order, mode, onAction, loading, activeAddresses, gpsPos, storePos }) {
   const [expanded, setExpanded] = useState(false);
   const items      = order.items || [];
@@ -270,6 +278,12 @@ function OrderCard({ order, mode, onAction, loading, activeAddresses, gpsPos, st
           {order.change_note && <p className="drv-change-note">💵 {order.change_note}</p>}
 
           <div className="drv-total-row">
+            <span>Pagamento</span>
+            <span style={{ fontWeight: 700, color: '#1d4ed8', fontSize: 13 }}>
+              {PM_LABELS[order.payment_method] || '—'}
+            </span>
+          </div>
+          <div className="drv-total-row" style={{ marginTop: 4 }}>
             <span>Total do pedido</span>
             <span className="drv-card-total">{fmtMoney(order.total || 0)}</span>
           </div>

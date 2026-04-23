@@ -61,6 +61,7 @@ function buildWhatsappUrl(whatsapp, { orderId, cart, customer, deliveryAddress, 
 
 export default function DeliveryWaitingScreen({ active, orderId, amount, cart, customer, deliveryAddress, paymentMethod, changeNote: changeNoteProp, changeFor: changeForProp, storeWhatsapp, storeName, onBack, onDone }) {
   const [orderStatus, setOrderStatus] = useState('pending');
+  const [driverName,  setDriverName]  = useState(null);
   const [linkCopied, setLinkCopied]   = useState(false);
   const pollRef     = useRef(null);
   const orderIdRef  = useRef(orderId);
@@ -83,6 +84,7 @@ export default function DeliveryWaitingScreen({ active, orderId, amount, cart, c
         const data = await res.json();
         if (data.status) setOrderStatus(data.status);
         if (data.total && !amountRef.current) amountRef.current = data.total;
+        if (data.driverName) setDriverName(data.driverName);
       } catch {}
     }, 6000);
   };
@@ -99,7 +101,7 @@ export default function DeliveryWaitingScreen({ active, orderId, amount, cart, c
       // Immediate fetch
       fetch(`/api/order-save?pixId=${oid}`)
         .then(r => r.json())
-        .then(d => { if (d.status) setOrderStatus(d.status); })
+        .then(d => { if (d.status) setOrderStatus(d.status); if (d.driverName) setDriverName(d.driverName); })
         .catch(() => {});
       startPolling(oid);
     } else {
@@ -238,11 +240,26 @@ export default function DeliveryWaitingScreen({ active, orderId, amount, cart, c
           </a>
         )}
 
-        {/* iFood/99food delivery notice */}
-        <div className="tracking-ifood-banner">
-          <img src="https://logodownload.org/wp-content/uploads/2017/05/ifood-logo.png" alt="iFood" className="tracking-ifood-logo"/>
-          <p>A entrega do seu pedido será feita por<br/><strong>Entregadores Parceiros iFood.</strong></p>
-        </div>
+        {/* Card do entregador — aparece quando um driver aceitar */}
+        {driverName && (
+          <div className="tracking-section">
+            <p className="tracking-section-title">Seu entregador</p>
+            <div className="tracking-address-box" style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '12px 14px' }}>
+              <div style={{
+                width: 46, height: 46, borderRadius: '50%',
+                background: '#e53935', flexShrink: 0,
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                color: '#fff', fontWeight: 800, fontSize: 20,
+              }}>
+                {driverName[0]?.toUpperCase()}
+              </div>
+              <div>
+                <p style={{ margin: 0, fontWeight: 700, fontSize: 15, color: '#1e2740' }}>{driverName}</p>
+                <p style={{ margin: '2px 0 0', fontSize: 12, color: '#16a34a', fontWeight: 600 }}>🛵 A caminho de você</p>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Address */}
         <div className="tracking-section">
