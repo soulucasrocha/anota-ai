@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import './driver.css';
+import DriverMap from './DriverMap';
 
 function fmtMoney(cents) { return 'R$ ' + (cents / 100).toFixed(2).replace('.', ','); }
 function fmtTime(iso) {
@@ -317,6 +318,7 @@ export default function DriverApp({ storeId }) {
   const [loading,   setLoading]   = useState(false);
   const [acting,    setActing]    = useState(null); // orderId being acted on
   const [gpsOk,     setGpsOk]     = useState(null); // null=unknown, true=ok, false=denied
+  const [gpsPos,    setGpsPos]    = useState(null); // { lat, lng }
 
   function handleLogin(t, d) {
     localStorage.setItem('drv_token', t);
@@ -355,6 +357,7 @@ export default function DriverApp({ storeId }) {
     const watchId = navigator.geolocation.watchPosition(
       (pos) => {
         setGpsOk(true);
+        setGpsPos({ lat: pos.coords.latitude, lng: pos.coords.longitude });
         fetch('/api/driver?scope=location', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', 'x-driver-token': token },
@@ -447,6 +450,13 @@ export default function DriverApp({ storeId }) {
           {activeOrders.length > 0 && <span className="drv-tab-badge drv-badge-mine">{activeOrders.length}</span>}
         </button>
         <button
+          className={'drv-tab' + (tab === 'map' ? ' active' : '')}
+          onClick={() => setTab('map')}
+        >
+          🗺️ Mapa
+          {activeOrders.length > 0 && <span className="drv-tab-badge drv-badge-mine">{activeOrders.length}</span>}
+        </button>
+        <button
           className={'drv-tab' + (tab === 'history' ? ' active' : '')}
           onClick={() => setTab('history')}
         >
@@ -490,6 +500,10 @@ export default function DriverApp({ storeId }) {
               </>
             )}
           </>
+        )}
+
+        {tab === 'map' && (
+          <DriverMap orders={mine} gpsPos={gpsPos} />
         )}
 
         {tab === 'history' && (
