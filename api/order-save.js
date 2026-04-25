@@ -14,8 +14,8 @@ export default async function handler(req, res) {
       .maybeSingle();
     if (!order) return res.status(200).json({ status: 'pending' });
 
-    // Buscar nome do entregador se houver assignment ativo
-    let driverName = null;
+    // Buscar nome e localização GPS do entregador se houver assignment ativo
+    let driverName = null, driverLat = null, driverLng = null, driverUpdatedAt = null;
     const { data: assignment } = await sb()
       .from('order_assignments')
       .select('driver_id, status')
@@ -25,10 +25,13 @@ export default async function handler(req, res) {
     if (assignment?.driver_id) {
       const { data: drv } = await sb()
         .from('drivers')
-        .select('name')
+        .select('name, location_lat, location_lng, location_updated_at')
         .eq('id', assignment.driver_id)
         .maybeSingle();
-      driverName = drv?.name || null;
+      driverName      = drv?.name               || null;
+      driverLat       = drv?.location_lat        || null;
+      driverLng       = drv?.location_lng        || null;
+      driverUpdatedAt = drv?.location_updated_at || null;
     }
 
     return res.status(200).json({
@@ -40,6 +43,9 @@ export default async function handler(req, res) {
       paymentMethod: order.payment_method || 'pix_online',
       deliveryPayment: order.delivery_payment || false,
       driverName,
+      driverLat,
+      driverLng,
+      driverUpdatedAt,
     });
   }
 

@@ -1,5 +1,7 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, lazy, Suspense } from 'react'
 import { fmtPrice } from '../../utils/helpers'
+
+const DriverTrackingMap = lazy(() => import('./DriverTrackingMap'))
 
 const STATUS_INFO = {
   pending:    { dots: 0, text: 'Aguardando aceitação da loja... 🕐', accepted: false },
@@ -62,6 +64,8 @@ function buildWhatsappUrl(whatsapp, { orderId, cart, customer, deliveryAddress, 
 export default function DeliveryWaitingScreen({ active, orderId, amount, cart, customer, deliveryAddress, paymentMethod, changeNote: changeNoteProp, changeFor: changeForProp, storeWhatsapp, storeName, onBack, onDone }) {
   const [orderStatus, setOrderStatus] = useState('pending');
   const [driverName,  setDriverName]  = useState(null);
+  const [driverPos,   setDriverPos]   = useState(null);  // { lat, lng }
+  const [etaInfo,     setEtaInfo]     = useState(null);  // { minutes, arrival }
   const [linkCopied, setLinkCopied]   = useState(false);
   const pollRef     = useRef(null);
   const orderIdRef  = useRef(orderId);
@@ -85,6 +89,7 @@ export default function DeliveryWaitingScreen({ active, orderId, amount, cart, c
         if (data.status) setOrderStatus(data.status);
         if (data.total && !amountRef.current) amountRef.current = data.total;
         if (data.driverName) setDriverName(data.driverName);
+        if (data.driverLat && data.driverLng) setDriverPos({ lat: data.driverLat, lng: data.driverLng });
       } catch {}
     }, 6000);
   };
@@ -101,7 +106,11 @@ export default function DeliveryWaitingScreen({ active, orderId, amount, cart, c
       // Immediate fetch
       fetch(`/api/order-save?pixId=${oid}`)
         .then(r => r.json())
-        .then(d => { if (d.status) setOrderStatus(d.status); if (d.driverName) setDriverName(d.driverName); })
+        .then(d => {
+          if (d.status) setOrderStatus(d.status);
+          if (d.driverName) setDriverName(d.driverName);
+          if (d.driverLat && d.driverLng) setDriverPos({ lat: d.driverLat, lng: d.driverLng });
+        })
         .catch(() => {});
       startPolling(oid);
     } else {
@@ -128,11 +137,13 @@ export default function DeliveryWaitingScreen({ active, orderId, amount, cart, c
   const stInfo = STATUS_INFO[orderStatus] || STATUS_INFO.pending;
   const { dots, text, accepted } = stInfo;
 
+  const pad = n => String(n).padStart(2, '0');
+  // ETA real do mapa (OSRM) ou estimativa estática de fallback
   const now  = new Date();
-  const from = new Date(now.getTime() + 25 * 60000);
-  const to   = new Date(now.getTime() + 35 * 60000);
-  const pad  = n => String(n).padStart(2, '0');
-  const eta  = `${pad(from.getHours())}:${pad(from.getMinutes())} - ${pad(to.getHours())}:${pad(to.getMinutes())}`;
+  const etaFallback = `${pad(new Date(now.getTime()+25*60000).getHours())}:${pad(new Date(now.getTime()+25*60000).getMinutes())} - ${pad(new Date(now.getTime()+35*60000).getHours())}:${pad(new Date(now.getTime()+35*60000).getMinutes())}`;
+  const etaDisplay = etaInfo
+    ? `~${etaInfo.arrival}  (${etaInfo.minutes} min)`
+    : etaFallback;
 
   return (
     <div className={'screen tracking-screen' + (active ? ' active' : '')}>
@@ -152,7 +163,7 @@ export default function DeliveryWaitingScreen({ active, orderId, amount, cart, c
         <div className="tracking-eta-row">
           <div>
             <p className="tracking-eta-label">{accepted ? 'Previsão de entrega' : 'Status do pedido'}</p>
-            <p className="tracking-eta-time">{accepted ? eta : 'Aguardando...'}</p>
+            <p className="tracking-eta-time">{accepted ? etaDisplay : 'Aguardando...'}</p>
           </div>
           <p className="tracking-realtime">Atualizado em<br/>tempo real</p>
         </div>
@@ -255,9 +266,39 @@ export default function DeliveryWaitingScreen({ active, orderId, amount, cart, c
               </div>
               <div>
                 <p style={{ margin: 0, fontWeight: 700, fontSize: 15, color: '#1e2740' }}>{driverName}</p>
-                <p style={{ margin: '2px 0 0', fontSize: 12, color: '#16a34a', fontWeight: 600 }}>🛵 A caminho de você</p>
+                <p style={{ margin: '2px 0 0', fontSize: 12, color: '#16a34a', fontWeight: 600 }}>
+                  {orderStatus === 'delivering' ? '🛵 A caminho de você' : '📦 Preparando seu pedido'}
+                </p>
               </div>
             </div>
+
+            {/* Mapa em tempo real — só aparece quando o entregador saiu para entrega */}
+            {orderStatus === 'delivering' && driverPos && (
+              <div style={{ marginTop: 10 }}>
+                <Suspense fallback={
+                  <div style={{ height: 230, borderRadius: 16, background: '#f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#94a3b8', fontSize: 13 }}>
+                    🗺️ Carregando mapa...
+                  </div>
+                }>
+                  <DriverTrackingMap
+                    driverPos={driverPos}
+                    address={deliveryAddress}
+                    onEta={setEtaInfo}
+                  />
+                </Suspense>
+              </div>
+            )}
+
+            {/* Badge "saiu para entrega" sem GPS */}
+            {orderStatus === 'delivering' && !driverPos && (
+              <div style={{
+                marginTop: 8, padding: '8px 12px', borderRadius: 10,
+                background: '#fef9c3', border: '1px solid #fde047',
+                fontSize: 12, color: '#854d0e', fontWeight: 600,
+              }}>
+                📡 Aguardando localização GPS do entregador...
+              </div>
+            )}
           </div>
         )}
 
