@@ -23,7 +23,8 @@ const PM_INFO = {
 export default function FinalizeScreen({
   active, address, onAddressChange, getCartTotal, onBack, onAdvance,
   geoData, slug, paymentMethodsData, defaultPaymentData,
-  deliveryZones, deliveryAddress, deliveryDefaultFee, deliveryDefaultDriverFee, onDeliveryFeeChange,
+  deliveryZones, deliveryAddress, deliveryDefaultFee, deliveryDefaultDriverFee,
+  storeLatLng, onDeliveryFeeChange,
 }) {
   const [suggestions, setSuggestions] = useState([]);
   const [showSugg,    setShowSugg]    = useState(false);
@@ -40,12 +41,15 @@ export default function FinalizeScreen({
   const [matchedZone,  setMatchedZone]    = useState(null);
   const [outsideArea,  setOutsideArea]    = useState(false);
   const [geoFailed,    setGeoFailed]      = useState(false);
-  const [storePos,     setStorePos]       = useState(null);
+  // storePos como [lat, lng] — usa coordenadas salvas ou geocodifica o endereço
+  const [storePos, setStorePos] = useState(() => storeLatLng || null);
+  useEffect(() => { if (storeLatLng) setStorePos(storeLatLng); }, [storeLatLng]);
 
   const DEFAULT_FEE        = deliveryDefaultFee       ?? 500;
   const DEFAULT_DRIVER_FEE = deliveryDefaultDriverFee ?? 0;
 
   const debouncedAddress = useDebounce(address, 800);
+  const debouncedCity    = useDebounce(city, 800);
   const inputRef = useRef(null);
 
   const zonesConfigured = Array.isArray(deliveryZones) && deliveryZones.length > 0;
@@ -114,16 +118,18 @@ export default function FinalizeScreen({
     setGpsLoading(false);
   }, [onAddressChange]);
 
-  // Check delivery zone when address changes
+  // Check delivery zone when address or city changes
   useEffect(() => {
-    if (!active || !zonesConfigured || debouncedAddress.length < 6) {
+    // Monta endereço completo (rua + cidade) para geocodificação mais precisa
+    const fullAddr = [debouncedAddress, debouncedCity].filter(Boolean).join(', ');
+    if (!active || !zonesConfigured || fullAddr.length < 6) {
       setMatchedZone(null); setOutsideArea(false); setGeoFailed(false);
       onDeliveryFeeChange?.(0);
       return;
     }
     let cancelled = false;
     setZoneChecking(true);
-    geocodeAddress(debouncedAddress).then(async customerPos => {
+    geocodeAddress(fullAddr, storePos).then(async customerPos => {
       if (cancelled) return;
       if (!customerPos) {
         setMatchedZone(null); setOutsideArea(false); setGeoFailed(true);
@@ -131,6 +137,7 @@ export default function FinalizeScreen({
         setZoneChecking(false);
         return;
       }
+      // storePos é opcional — findZone funciona sem ele para zonas polígono
       let sPos = storePos;
       if (!sPos && deliveryAddress) sPos = await geocodeAddress(deliveryAddress);
       if (cancelled) return;
@@ -148,7 +155,7 @@ export default function FinalizeScreen({
       }
     });
     return () => { cancelled = true; };
-  }, [debouncedAddress, active, zonesConfigured]);
+  }, [debouncedAddress, debouncedCity, active, zonesConfigured]);
 
   // pickSuggestion — handles object { label, street, houseNumber, city } from searchAddress
   const pickSuggestion = useCallback((s) => {

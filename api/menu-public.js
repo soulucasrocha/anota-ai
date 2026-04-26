@@ -57,10 +57,13 @@ export default async function handler(req, res) {
       categories: categoriesList,
       pixelId: tracking.pixel_id || null,
       gtmId:   tracking.gtm_id   || null,
-      deliveryZones:       delivery?.zones       || [],
-      deliveryAddress:     delivery?.address     || '',
-      deliveryDefaultFee:       delivery?.default_fee        ?? 500,
+      deliveryZones:            delivery?.zones             || [],
+      deliveryAddress:          delivery?.address           || '',
+      deliveryDefaultFee:       delivery?.default_fee       ?? 500,
       deliveryDefaultDriverFee: delivery?.default_driver_fee ?? 0,
+      storeLatLng: (delivery?.store_lat && delivery?.store_lng)
+        ? [delivery.store_lat, delivery.store_lng]
+        : null,
     };
 
     if (!products || !products.length) {

@@ -126,6 +126,7 @@ export default function App() {
   const [deliveryDefaultFee,       setDeliveryDefaultFee]       = useState(500);
   const [deliveryDefaultDriverFee, setDeliveryDefaultDriverFee] = useState(0);
   const [driverCommission,         setDriverCommission]         = useState(0);
+  const [storeLatLng,              setStoreLatLng]              = useState(null);
 
   // Wrapper de setScreen que salva na sessão
   const setScreen = useCallback((s) => {
@@ -158,6 +159,7 @@ export default function App() {
         if (d.deliveryAddress)    setDeliveryAddress(d.deliveryAddress);
         if (d.deliveryDefaultFee       != null) setDeliveryDefaultFee(d.deliveryDefaultFee);
         if (d.deliveryDefaultDriverFee != null) setDeliveryDefaultDriverFee(d.deliveryDefaultDriverFee);
+        if (d.storeLatLng)                      setStoreLatLng(d.storeLatLng);
         // Inject tracking scripts
         if (d.gtmId && !document.getElementById('gtm-script')) {
           const s = document.createElement('script');
@@ -444,6 +446,7 @@ export default function App() {
         deliveryAddress={deliveryAddress}
         deliveryDefaultFee={deliveryDefaultFee}
         deliveryDefaultDriverFee={deliveryDefaultDriverFee}
+        storeLatLng={storeLatLng}
         onDeliveryFeeChange={setDeliveryFee}
       />
 
