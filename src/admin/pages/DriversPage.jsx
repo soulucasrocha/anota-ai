@@ -11,17 +11,20 @@ function isOnline(lastSeen) {
 }
 
 export default function DriversPage({ token, storeId }) {
-  const [tab,      setTab]      = useState('list'); // 'list' | 'online'
-  const [drivers,  setDrivers]  = useState([]);
-  const [online,   setOnline]   = useState([]);
-  const [loading,  setLoading]  = useState(true);
-  const [onlineLoading, setOnlineLoading] = useState(false);
-  const [form,     setForm]     = useState({ name: '', phone: '', email: '', login: '', password: '' });
-  const [showPwd,  setShowPwd]  = useState(false);
-  const [saving,   setSaving]   = useState(false);
-  const [error,    setError]    = useState('');
-  const [editId,   setEditId]   = useState(null);
-  const [copied,   setCopied]   = useState(false);
+  const [tab,          setTab]          = useState('list'); // 'list' | 'online' | 'stats'
+  const [drivers,      setDrivers]      = useState([]);
+  const [online,       setOnline]       = useState([]);
+  const [loading,      setLoading]      = useState(true);
+  const [onlineLoading,setOnlineLoading]= useState(false);
+  const [form,         setForm]         = useState({ name: '', phone: '', email: '', login: '', password: '' });
+  const [showPwd,      setShowPwd]      = useState(false);
+  const [saving,       setSaving]       = useState(false);
+  const [error,        setError]        = useState('');
+  const [editId,       setEditId]       = useState(null);
+  const [copied,       setCopied]       = useState(false);
+  const [statsData,    setStatsData]    = useState(null);
+  const [statsLoading, setStatsLoading] = useState(false);
+  const [statsPeriod,  setStatsPeriod]  = useState('today'); // 'today' | 'yesterday' | 'week'
 
   const driverUrl = `${window.location.origin}/motorista?loja=${storeId}`;
 
@@ -33,6 +36,19 @@ export default function DriversPage({ token, storeId }) {
     setDrivers(d.drivers || []);
     setLoading(false);
   }
+
+  const fetchStats = useCallback(async () => {
+    if (!storeId) return;
+    setStatsLoading(true);
+    try {
+      const r = await fetch(`/api/driver?scope=stats&storeId=${storeId}`, {
+        headers: { 'x-admin-token': token, 'x-store-id': storeId },
+      });
+      const d = await r.json();
+      setStatsData(d);
+    } catch {}
+    setStatsLoading(false);
+  }, [token, storeId]);
 
   const fetchOnline = useCallback(async () => {
     if (!storeId) return;
@@ -56,6 +72,11 @@ export default function DriversPage({ token, storeId }) {
     const t = setInterval(fetchOnline, 15000);
     return () => clearInterval(t);
   }, [tab, fetchOnline]);
+
+  // Load stats when tab is active
+  useEffect(() => {
+    if (tab === 'stats') fetchStats();
+  }, [tab, fetchStats]);
 
   function startEdit(driver) {
     setEditId(driver.id);
@@ -143,6 +164,13 @@ export default function DriversPage({ token, storeId }) {
               {onlineCount}
             </span>
           )}
+        </button>
+        <button
+          className={`adm-btn${tab === 'stats' ? ' primary' : ' ghost'}`}
+          style={{ fontSize: 13 }}
+          onClick={() => setTab('stats')}
+        >
+          📊 Resumo
         </button>
       </div>
 
@@ -241,6 +269,150 @@ export default function DriversPage({ token, storeId }) {
             )}
           </div>
         </>
+      )}
+
+      {/* ── STATS TAB ── */}
+      {tab === 'stats' && (
+        <div>
+          {/* Period selector */}
+          <div style={{ display: 'flex', gap: 8, marginBottom: 20 }}>
+            {[
+              { key: 'today',     label: '📅 Hoje'   },
+              { key: 'yesterday', label: '🗓️ Ontem'  },
+              { key: 'week',      label: '📆 Semana' },
+            ].map(p => (
+              <button
+                key={p.key}
+                className={`adm-btn${statsPeriod === p.key ? ' primary' : ' ghost'}`}
+                style={{ fontSize: 13 }}
+                onClick={() => setStatsPeriod(p.key)}
+              >
+                {p.label}
+              </button>
+            ))}
+            <button
+              className="adm-btn ghost"
+              style={{ fontSize: 12, marginLeft: 'auto' }}
+              onClick={fetchStats}
+              disabled={statsLoading}
+            >
+              {statsLoading ? '...' : '🔄 Atualizar'}
+            </button>
+          </div>
+
+          {statsLoading && !statsData ? (
+            <div style={{ textAlign: 'center', color: '#aaa', padding: 40 }}>Carregando...</div>
+          ) : (() => {
+            const allDrivers  = statsData?.drivers || [];
+            const statsMap    = statsData?.stats   || {};
+
+            // Inclui somente entregadores que têm entregas no período OU todos os ativos
+            const rows = allDrivers.map(d => ({
+              ...d,
+              p: statsMap[d.id]?.[statsPeriod] || { count: 0, total: 0, commission: 0 },
+            })).sort((a, b) => b.p.commission - a.p.commission);
+
+            const totals = rows.reduce(
+              (acc, r) => ({ count: acc.count + r.p.count, total: acc.total + r.p.total, commission: acc.commission + r.p.commission }),
+              { count: 0, total: 0, commission: 0 }
+            );
+
+            const fmt = v => (v / 100).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+
+            const periodLabel = { today: 'Hoje', yesterday: 'Ontem', week: 'Esta semana' }[statsPeriod];
+
+            return (
+              <div>
+                {rows.length === 0 ? (
+                  <div style={{ textAlign: 'center', color: '#9ca3af', padding: '60px 20px', fontSize: 14 }}>
+                    <p style={{ fontSize: 32, marginBottom: 8 }}>📊</p>
+                    Sem dados para exibir
+                  </div>
+                ) : (
+                  <>
+                    {/* Driver cards */}
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 16 }}>
+                      {rows.map(d => (
+                        <div key={d.id} style={{
+                          background: '#fff',
+                          border: '1px solid #e5e7eb',
+                          borderRadius: 14,
+                          padding: '16px 20px',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: 16,
+                          opacity: d.p.count === 0 ? 0.45 : 1,
+                        }}>
+                          {/* Avatar */}
+                          <div style={{
+                            width: 44, height: 44, borderRadius: '50%',
+                            background: d.p.count > 0 ? '#e53935' : '#e5e7eb',
+                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                            color: '#fff', fontWeight: 800, fontSize: 18, flexShrink: 0,
+                          }}>
+                            {d.name[0]?.toUpperCase()}
+                          </div>
+
+                          {/* Name */}
+                          <div style={{ minWidth: 120, flex: 1 }}>
+                            <p style={{ margin: 0, fontWeight: 700, fontSize: 14, color: '#1e2740' }}>{d.name}</p>
+                            <p style={{ margin: 0, fontSize: 12, color: '#9ca3af' }}>{periodLabel}</p>
+                          </div>
+
+                          {/* Stats grid */}
+                          <div style={{ display: 'flex', gap: 20, flexWrap: 'wrap' }}>
+                            <div style={{ textAlign: 'center' }}>
+                              <p style={{ margin: 0, fontSize: 22, fontWeight: 800, color: '#1e2740', lineHeight: 1 }}>{d.p.count}</p>
+                              <p style={{ margin: '2px 0 0', fontSize: 11, color: '#9ca3af', fontWeight: 600 }}>entregas</p>
+                            </div>
+                            <div style={{ textAlign: 'center' }}>
+                              <p style={{ margin: 0, fontSize: 15, fontWeight: 800, color: '#059669', lineHeight: 1 }}>{fmt(d.p.total)}</p>
+                              <p style={{ margin: '2px 0 0', fontSize: 11, color: '#9ca3af', fontWeight: 600 }}>em pedidos</p>
+                            </div>
+                            <div style={{ textAlign: 'center' }}>
+                              <p style={{ margin: 0, fontSize: 15, fontWeight: 800, color: '#d97706', lineHeight: 1 }}>{fmt(d.p.commission)}</p>
+                              <p style={{ margin: '2px 0 0', fontSize: 11, color: '#9ca3af', fontWeight: 600 }}>comissão</p>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+
+                    {/* Totals row */}
+                    <div style={{
+                      background: '#1e2740',
+                      borderRadius: 14,
+                      padding: '16px 20px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 20,
+                      flexWrap: 'wrap',
+                    }}>
+                      <p style={{ margin: 0, fontSize: 13, fontWeight: 700, color: '#fff', flex: 1 }}>
+                        📊 Total — {periodLabel}
+                        <span style={{ marginLeft: 8, fontSize: 12, color: '#93c5fd', fontWeight: 400 }}>
+                          {rows.filter(r => r.p.count > 0).length} entregador{rows.filter(r => r.p.count > 0).length !== 1 ? 'es' : ''}
+                        </span>
+                      </p>
+                      <div style={{ textAlign: 'center' }}>
+                        <p style={{ margin: 0, fontSize: 22, fontWeight: 800, color: '#fff', lineHeight: 1 }}>{totals.count}</p>
+                        <p style={{ margin: '2px 0 0', fontSize: 11, color: '#93c5fd', fontWeight: 600 }}>entregas</p>
+                      </div>
+                      <div style={{ textAlign: 'center' }}>
+                        <p style={{ margin: 0, fontSize: 15, fontWeight: 800, color: '#6ee7b7', lineHeight: 1 }}>{fmt(totals.total)}</p>
+                        <p style={{ margin: '2px 0 0', fontSize: 11, color: '#93c5fd', fontWeight: 600 }}>em pedidos</p>
+                      </div>
+                      <div style={{ textAlign: 'center' }}>
+                        <p style={{ margin: 0, fontSize: 15, fontWeight: 800, color: '#fcd34d', lineHeight: 1 }}>{fmt(totals.commission)}</p>
+                        <p style={{ margin: '2px 0 0', fontSize: 11, color: '#93c5fd', fontWeight: 600 }}>comissão</p>
+                      </div>
+                    </div>
+                  </>
+                )}
+              </div>
+            );
+          })()}
+        </div>
       )}
 
       {/* ── ONLINE TAB ── */}

@@ -333,5 +333,89 @@ export default async function handler(req, res) {
     return res.status(405).end();
   }
 
+  // ── STATS: resumo por entregador (hoje / ontem / semana) ──────────────────
+  if (scope === 'stats') {
+    if (!verifyAdminToken(req)) return res.status(401).json({ error: 'Unauthorized' });
+    const storeId = req.query.storeId || req.headers['x-store-id'];
+    if (!storeId) return res.status(400).json({ error: 'missing storeId' });
+
+    // BRT = UTC-3
+    function brtMidnight(daysAgo = 0) {
+      const brtMs  = Date.now() - 3 * 60 * 60 * 1000;
+      const d      = new Date(brtMs);
+      d.setUTCDate(d.getUTCDate() - daysAgo);
+      d.setUTCHours(0, 0, 0, 0);
+      return new Date(d.getTime() + 3 * 60 * 60 * 1000);
+    }
+    function brtWeekStart() {
+      const brtNow = new Date(Date.now() - 3 * 60 * 60 * 1000);
+      const day    = brtNow.getUTCDay(); // 0=Dom
+      brtNow.setUTCDate(brtNow.getUTCDate() - (day === 0 ? 6 : day - 1));
+      brtNow.setUTCHours(0, 0, 0, 0);
+      return new Date(brtNow.getTime() + 3 * 60 * 60 * 1000);
+    }
+
+    const weekStart      = brtWeekStart().toISOString();
+    const todayStart     = brtMidnight(0).toISOString();
+    const yesterdayStart = brtMidnight(1).toISOString();
+
+    // Entregas concluídas desde início da semana
+    const { data: assignments } = await sb()
+      .from('order_assignments')
+      .select('driver_id, order_id, delivered_at')
+      .eq('store_id', storeId)
+      .eq('status', 'delivered')
+      .gte('delivered_at', weekStart)
+      .order('delivered_at', { ascending: false });
+
+    const { data: driverRows } = await sb()
+      .from('drivers')
+      .select('id, name')
+      .eq('store_id', storeId)
+      .eq('active', true);
+
+    if (!assignments?.length) return res.status(200).json({ stats: {}, drivers: driverRows || [] });
+
+    const orderIds = [...new Set(assignments.map(a => a.order_id))];
+    const { data: orders } = await sb()
+      .from('orders')
+      .select('id, total, driver_commission')
+      .in('id', orderIds);
+
+    const orderMap = {};
+    (orders || []).forEach(o => { orderMap[String(o.id)] = o; });
+
+    function empty() { return { count: 0, total: 0, commission: 0 }; }
+
+    const stats = {};
+    for (const a of assignments) {
+      const o   = orderMap[String(a.order_id)];
+      if (!o) continue;
+      const did = a.driver_id;
+      if (!stats[did]) stats[did] = { today: empty(), yesterday: empty(), week: empty() };
+
+      const total      = o.total           || 0;
+      const commission = o.driver_commission || 0;
+
+      // semana (sempre — filtramos desde weekStart)
+      stats[did].week.count++;
+      stats[did].week.total      += total;
+      stats[did].week.commission += commission;
+
+      // hoje / ontem
+      if (a.delivered_at >= todayStart) {
+        stats[did].today.count++;
+        stats[did].today.total      += total;
+        stats[did].today.commission += commission;
+      } else if (a.delivered_at >= yesterdayStart) {
+        stats[did].yesterday.count++;
+        stats[did].yesterday.total      += total;
+        stats[did].yesterday.commission += commission;
+      }
+    }
+
+    return res.status(200).json({ stats, drivers: driverRows || [] });
+  }
+
   return res.status(400).json({ error: 'scope inválido' });
 }
