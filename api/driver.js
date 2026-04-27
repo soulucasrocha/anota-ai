@@ -359,23 +359,21 @@ export default async function handler(req, res) {
     const todayStart     = brtMidnight(0).toISOString();
     const yesterdayStart = brtMidnight(1).toISOString();
     const monthStart     = brtMidnight(30).toISOString();
-    // Fetch desde o mais antigo dos períodos (30 dias garante ontem mesmo em segunda-feira)
-    const fetchFrom      = monthStart;
 
-    // Entregas concluídas nos últimos 30 dias
-    const { data: assignments } = await sb()
-      .from('order_assignments')
-      .select('driver_id, order_id, delivered_at')
-      .eq('store_id', storeId)
-      .eq('status', 'delivered')
-      .gte('delivered_at', fetchFrom)
-      .order('delivered_at', { ascending: false });
-
-    const { data: driverRows } = await sb()
-      .from('drivers')
-      .select('id, name')
-      .eq('store_id', storeId)
-      .eq('active', true);
+    // Busca TODO o histórico do banco (sem filtro de data)
+    const [{ data: assignments }, { data: driverRows }] = await Promise.all([
+      sb()
+        .from('order_assignments')
+        .select('driver_id, order_id, delivered_at')
+        .eq('store_id', storeId)
+        .eq('status', 'delivered')
+        .order('delivered_at', { ascending: false }),
+      sb()
+        .from('drivers')
+        .select('id, name')
+        .eq('store_id', storeId)
+        .eq('active', true),
+    ]);
 
     if (!assignments?.length) return res.status(200).json({ stats: {}, drivers: driverRows || [] });
 
@@ -400,19 +398,7 @@ export default async function handler(req, res) {
       const total      = o.total            || 0;
       const commission = o.driver_commission || 0;
 
-      // mês (sempre — filtramos desde monthStart)
-      stats[did].month.count++;
-      stats[did].month.total      += total;
-      stats[did].month.commission += commission;
-
-      // semana
-      if (a.delivered_at >= weekStart) {
-        stats[did].week.count++;
-        stats[did].week.total      += total;
-        stats[did].week.commission += commission;
-      }
-
-      // hoje / ontem
+      // cada período verificado independentemente
       if (a.delivered_at >= todayStart) {
         stats[did].today.count++;
         stats[did].today.total      += total;
@@ -421,6 +407,18 @@ export default async function handler(req, res) {
         stats[did].yesterday.count++;
         stats[did].yesterday.total      += total;
         stats[did].yesterday.commission += commission;
+      }
+
+      if (a.delivered_at >= weekStart) {
+        stats[did].week.count++;
+        stats[did].week.total      += total;
+        stats[did].week.commission += commission;
+      }
+
+      if (a.delivered_at >= monthStart) {
+        stats[did].month.count++;
+        stats[did].month.total      += total;
+        stats[did].month.commission += commission;
       }
     }
 
