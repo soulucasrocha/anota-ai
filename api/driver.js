@@ -358,14 +358,17 @@ export default async function handler(req, res) {
     const weekStart      = brtWeekStart().toISOString();
     const todayStart     = brtMidnight(0).toISOString();
     const yesterdayStart = brtMidnight(1).toISOString();
+    const monthStart     = brtMidnight(30).toISOString();
+    // Fetch desde o mais antigo dos períodos (30 dias garante ontem mesmo em segunda-feira)
+    const fetchFrom      = monthStart;
 
-    // Entregas concluídas desde início da semana
+    // Entregas concluídas nos últimos 30 dias
     const { data: assignments } = await sb()
       .from('order_assignments')
       .select('driver_id, order_id, delivered_at')
       .eq('store_id', storeId)
       .eq('status', 'delivered')
-      .gte('delivered_at', weekStart)
+      .gte('delivered_at', fetchFrom)
       .order('delivered_at', { ascending: false });
 
     const { data: driverRows } = await sb()
@@ -392,15 +395,22 @@ export default async function handler(req, res) {
       const o   = orderMap[String(a.order_id)];
       if (!o) continue;
       const did = a.driver_id;
-      if (!stats[did]) stats[did] = { today: empty(), yesterday: empty(), week: empty() };
+      if (!stats[did]) stats[did] = { today: empty(), yesterday: empty(), week: empty(), month: empty() };
 
-      const total      = o.total           || 0;
+      const total      = o.total            || 0;
       const commission = o.driver_commission || 0;
 
-      // semana (sempre — filtramos desde weekStart)
-      stats[did].week.count++;
-      stats[did].week.total      += total;
-      stats[did].week.commission += commission;
+      // mês (sempre — filtramos desde monthStart)
+      stats[did].month.count++;
+      stats[did].month.total      += total;
+      stats[did].month.commission += commission;
+
+      // semana
+      if (a.delivered_at >= weekStart) {
+        stats[did].week.count++;
+        stats[did].week.total      += total;
+        stats[did].week.commission += commission;
+      }
 
       // hoje / ontem
       if (a.delivered_at >= todayStart) {

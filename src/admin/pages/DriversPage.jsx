@@ -280,6 +280,7 @@ export default function DriversPage({ token, storeId }) {
               { key: 'today',     label: '📅 Hoje'   },
               { key: 'yesterday', label: '🗓️ Ontem'  },
               { key: 'week',      label: '📆 Semana' },
+              { key: 'month',     label: '🗃️ Mês'    },
             ].map(p => (
               <button
                 key={p.key}
@@ -319,7 +320,7 @@ export default function DriversPage({ token, storeId }) {
 
             const fmt = v => (v / 100).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 
-            const periodLabel = { today: 'Hoje', yesterday: 'Ontem', week: 'Esta semana' }[statsPeriod];
+            const periodLabel = { today: 'Hoje', yesterday: 'Ontem', week: 'Esta semana', month: 'Últimos 30 dias' }[statsPeriod];
 
             return (
               <div>
