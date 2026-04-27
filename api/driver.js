@@ -422,6 +422,26 @@ export default async function handler(req, res) {
       }
     }
 
+    // Período personalizado (startDate / endDate no formato YYYY-MM-DD, fuso BRT)
+    if (req.query.startDate && req.query.endDate) {
+      const rStart = req.query.startDate + 'T03:00:00.000Z';          // meia-noite BRT
+      const rEndD  = new Date(req.query.endDate + 'T03:00:00.000Z');
+      rEndD.setUTCDate(rEndD.getUTCDate() + 1);                       // final do dia
+      const rEnd = rEndD.toISOString();
+
+      for (const a of assignments) {
+        if (a.delivered_at < rStart || a.delivered_at >= rEnd) continue;
+        const o = orderMap[String(a.order_id)];
+        if (!o) continue;
+        const did = a.driver_id;
+        if (!stats[did]) stats[did] = { today: empty(), yesterday: empty(), week: empty(), month: empty() };
+        if (!stats[did].custom) stats[did].custom = empty();
+        stats[did].custom.count++;
+        stats[did].custom.total      += o.total            || 0;
+        stats[did].custom.commission += o.driver_commission || 0;
+      }
+    }
+
     return res.status(200).json({ stats, drivers: driverRows || [] });
   }
 

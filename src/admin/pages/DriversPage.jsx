@@ -1,5 +1,162 @@
 import { useState, useEffect, useCallback } from 'react';
 
+// ─── DateRangePicker ─────────────────────────────────────────────────────────
+function DateRangePicker({ onApply, onClose, initStart, initEnd }) {
+  const todayDate = new Date();
+  todayDate.setHours(0, 0, 0, 0);
+
+  function toYMD(d) {
+    return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+  }
+  const todayStr = toYMD(todayDate);
+
+  const [start, setStart] = useState(initStart || null);
+  const [end,   setEnd]   = useState(initEnd   || null);
+  const [hover, setHover] = useState(null);
+
+  const [lm, setLm] = useState(todayDate.getMonth() === 0 ? 11 : todayDate.getMonth() - 1);
+  const [ly, setLy] = useState(todayDate.getMonth() === 0 ? todayDate.getFullYear() - 1 : todayDate.getFullYear());
+  const rm = lm === 11 ? 0  : lm + 1;
+  const ry = lm === 11 ? ly + 1 : ly;
+
+  function prevM() { if (lm===0) { setLm(11); setLy(y=>y-1); } else setLm(m=>m-1); }
+  function nextM() { if (lm===11){ setLm(0);  setLy(y=>y+1); } else setLm(m=>m+1); }
+
+  function clickDay(str) {
+    if (str > todayStr) return;
+    if (!start || (start && end)) { setStart(str); setEnd(null); }
+    else if (str < start)         { setEnd(start); setStart(str); }
+    else                          { setEnd(str); }
+  }
+
+  const effEnd   = end   || (start && hover && hover > start  ? hover : null);
+  const effStart = start && hover && hover < start ? hover : start;
+
+  const MN = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+  const DN = ['Seg','Ter','Qua','Qui','Sex','Sáb','Dom'];
+
+  function dAgo(n) { const x = new Date(todayDate); x.setDate(x.getDate()-n); return toYMD(x); }
+  function wS(w=0) { const x=new Date(todayDate),dow=x.getDay(); x.setDate(x.getDate()-(dow===0?6:dow-1)-w*7); return toYMD(x); }
+  function wE(w=0) { const x=new Date(todayDate),dow=x.getDay(); x.setDate(x.getDate()+(dow===0?0:7-dow)-w*7); return toYMD(x); }
+  function mS(n=0) { return toYMD(new Date(todayDate.getFullYear(), todayDate.getMonth()-n, 1)); }
+  function mE(n=0) { return toYMD(new Date(todayDate.getFullYear(), todayDate.getMonth()-n+1, 0)); }
+
+  const presets = [
+    ['Hoje',            todayStr,      todayStr  ],
+    ['Ontem',           dAgo(1),       dAgo(1)   ],
+    ['Últimos 7 dias',  dAgo(6),       todayStr  ],
+    ['Esta semana',     wS(),          todayStr  ],
+    ['Semana passada',  wS(1),         wE(1)     ],
+    ['Este mês',        mS(),          todayStr  ],
+    ['Mês passado',     mS(1),         mE(1)     ],
+    ['Últimos 28 dias', dAgo(27),      todayStr  ],
+    ['Últimos 30 dias', dAgo(29),      todayStr  ],
+    ['Máximo',          '2020-01-01',  todayStr  ],
+  ];
+
+  function renderCal(year, month, side) {
+    const total    = new Date(year, month+1, 0).getDate();
+    const firstDow = (() => { const fd = new Date(year, month, 1).getDay(); return fd===0?6:fd-1; })();
+    const cells    = [
+      ...Array(firstDow).fill(null),
+      ...Array.from({length: total}, (_,i) =>
+        `${year}-${String(month+1).padStart(2,'0')}-${String(i+1).padStart(2,'0')}`
+      ),
+    ];
+    const btnStyle = { background:'none', border:'1px solid #e5e7eb', borderRadius:6, width:26, height:26, cursor:'pointer', fontSize:15, display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 };
+    return (
+      <div style={{width:210}}>
+        <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:10}}>
+          {side==='left'  ? <button onClick={prevM} style={btnStyle}>‹</button> : <div style={{width:26}}/>}
+          <span style={{fontSize:13,fontWeight:700,color:'#1e2740'}}>{MN[month]} {year}</span>
+          {side==='right' ? <button onClick={nextM} style={btnStyle}>›</button> : <div style={{width:26}}/>}
+        </div>
+        <div style={{display:'grid',gridTemplateColumns:'repeat(7,1fr)',marginBottom:4}}>
+          {DN.map(dn=><div key={dn} style={{textAlign:'center',fontSize:10,fontWeight:600,color:'#9ca3af'}}>{dn}</div>)}
+        </div>
+        <div style={{display:'grid',gridTemplateColumns:'repeat(7,1fr)'}}>
+          {cells.map((str,i)=>{
+            if(!str) return <div key={`e${i}`}/>;
+            const isSt  = str===effStart;
+            const isEn  = str===effEnd;
+            const inRng = effStart && effEnd && str>effStart && str<effEnd;
+            const isTdy = str===todayStr;
+            const fut   = str>todayStr;
+            return (
+              <div key={str}
+                onClick={()=>clickDay(str)}
+                onMouseEnter={()=>start&&!end&&setHover(str)}
+                style={{
+                  textAlign:'center',fontSize:12,padding:'6px 0',userSelect:'none',
+                  background:(isSt||isEn)?'#1e40af':inRng?'#dbeafe':'transparent',
+                  color:(isSt||isEn)?'#fff':fut?'#d1d5db':isTdy?'#2563eb':'#374151',
+                  borderRadius:isSt?'6px 0 0 6px':isEn?'0 6px 6px 0':inRng?0:4,
+                  fontWeight:(isTdy||isSt||isEn)?700:400,
+                  cursor:fut?'not-allowed':'pointer',
+                  outline:isTdy&&!(isSt||isEn)?'2px solid #93c5fd':'none',
+                  outlineOffset:-2,
+                }}
+              >{parseInt(str.slice(-2))}</div>
+            );
+          })}
+        </div>
+      </div>
+    );
+  }
+
+  function fmtBR(str) {
+    if (!str) return '—';
+    const [y,m,dd] = str.split('-'); return `${dd}/${m}/${y}`;
+  }
+
+  return (
+    <div
+      style={{position:'absolute',top:'100%',left:0,zIndex:1000,marginTop:6,background:'#fff',border:'1px solid #e5e7eb',borderRadius:14,boxShadow:'0 12px 40px rgba(0,0,0,0.15)',display:'flex',overflow:'hidden',minWidth:690}}
+      onMouseLeave={()=>setHover(null)}
+    >
+      {/* Presets */}
+      <div style={{width:168,background:'#f9fafb',borderRight:'1px solid #e5e7eb',padding:'12px 0'}}>
+        <p style={{margin:'0 0 6px 14px',fontSize:10,fontWeight:700,color:'#9ca3af',textTransform:'uppercase',letterSpacing:1}}>Presets</p>
+        {presets.map(([label,ps,pe])=>{
+          const active = start===ps && (end||start)===pe;
+          return (
+            <button key={label}
+              onClick={()=>{setStart(ps);setEnd(pe);}}
+              style={{display:'block',width:'100%',textAlign:'left',padding:'7px 14px',fontSize:13,background:active?'#eff6ff':'none',border:'none',cursor:'pointer',color:active?'#1e40af':'#374151',fontWeight:active?700:400}}
+              onMouseEnter={e=>{if(!active)e.currentTarget.style.background='#f3f4f6';}}
+              onMouseLeave={e=>{e.currentTarget.style.background=active?'#eff6ff':'none';}}
+            >{label}</button>
+          );
+        })}
+      </div>
+
+      {/* Calendars */}
+      <div style={{padding:'16px 20px',flex:1}}>
+        <div style={{display:'flex',gap:28}}>
+          {renderCal(ly,lm,'left')}
+          {renderCal(ry,rm,'right')}
+        </div>
+
+        {/* Range display */}
+        <div style={{display:'flex',alignItems:'center',gap:10,marginTop:14,padding:'8px 12px',background:'#f9fafb',borderRadius:8}}>
+          <div style={{flex:1,padding:'5px 10px',background:'#fff',border:'1px solid #e5e7eb',borderRadius:6,fontSize:12,color:'#1e2740',fontWeight:600}}>{fmtBR(start)||'—'}</div>
+          <span style={{color:'#9ca3af',fontSize:14}}>→</span>
+          <div style={{flex:1,padding:'5px 10px',background:'#fff',border:'1px solid #e5e7eb',borderRadius:6,fontSize:12,color:'#1e2740',fontWeight:600}}>{fmtBR(end||(hover&&hover>start?hover:null))||'—'}</div>
+        </div>
+
+        {/* Footer */}
+        <div style={{display:'flex',gap:8,justifyContent:'flex-end',marginTop:14,paddingTop:12,borderTop:'1px solid #f3f4f6'}}>
+          <button className="adm-btn ghost" style={{fontSize:13}} onClick={onClose}>Cancelar</button>
+          <button className="adm-btn primary" style={{fontSize:13}} disabled={!start||!end} onClick={()=>start&&end&&onApply(start,end)}>
+            Atualizar
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+// ─────────────────────────────────────────────────────────────────────────────
+
 function fmtTime(iso) {
   if (!iso) return '—';
   return new Date(iso).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
@@ -24,7 +181,9 @@ export default function DriversPage({ token, storeId }) {
   const [copied,       setCopied]       = useState(false);
   const [statsData,    setStatsData]    = useState(null);
   const [statsLoading, setStatsLoading] = useState(false);
-  const [statsPeriod,  setStatsPeriod]  = useState('today'); // 'today' | 'yesterday' | 'week'
+  const [statsPeriod,  setStatsPeriod]  = useState('today'); // 'today'|'yesterday'|'week'|'month'|'custom'
+  const [customRange,  setCustomRange]  = useState({ start: null, end: null });
+  const [pickerOpen,   setPickerOpen]   = useState(false);
 
   const driverUrl = `${window.location.origin}/motorista?loja=${storeId}`;
 
@@ -37,18 +196,30 @@ export default function DriversPage({ token, storeId }) {
     setLoading(false);
   }
 
-  const fetchStats = useCallback(async () => {
+  const fetchStats = useCallback(async (customStart, customEnd) => {
     if (!storeId) return;
     setStatsLoading(true);
     try {
-      const r = await fetch(`/api/driver?scope=stats&storeId=${storeId}`, {
-        headers: { 'x-admin-token': token, 'x-store-id': storeId },
-      });
+      let url = `/api/driver?scope=stats&storeId=${storeId}`;
+      if (customStart && customEnd) url += `&startDate=${customStart}&endDate=${customEnd}`;
+      const r = await fetch(url, { headers: { 'x-admin-token': token, 'x-store-id': storeId } });
       const d = await r.json();
       setStatsData(d);
     } catch {}
     setStatsLoading(false);
   }, [token, storeId]);
+
+  function handleCustomApply(start, end) {
+    setCustomRange({ start, end });
+    setStatsPeriod('custom');
+    setPickerOpen(false);
+    fetchStats(start, end);
+  }
+
+  function fmtDateBR(str) {
+    if (!str) return '';
+    const [y, m, dd] = str.split('-'); return `${dd}/${m}/${y}`;
+  }
 
   const fetchOnline = useCallback(async () => {
     if (!storeId) return;
@@ -286,22 +457,52 @@ export default function DriversPage({ token, storeId }) {
                 key={p.key}
                 className={`adm-btn${statsPeriod === p.key ? ' primary' : ' ghost'}`}
                 style={{ fontSize: 13 }}
-                onClick={() => setStatsPeriod(p.key)}
+                onClick={() => { setStatsPeriod(p.key); setPickerOpen(false); }}
               >
                 {p.label}
               </button>
             ))}
+
+            {/* Personalizado */}
+            <div style={{ position: 'relative' }}>
+              <button
+                className={`adm-btn${statsPeriod === 'custom' ? ' primary' : ' ghost'}`}
+                style={{ fontSize: 13 }}
+                onClick={() => setPickerOpen(v => !v)}
+              >
+                🗕&nbsp;
+                {statsPeriod === 'custom' && customRange.start
+                  ? customRange.start === customRange.end
+                    ? fmtDateBR(customRange.start)
+                    : `${fmtDateBR(customRange.start)} → ${fmtDateBR(customRange.end)}`
+                  : 'Personalizado'} ▾
+              </button>
+              {pickerOpen && (
+                <DateRangePicker
+                  onApply={handleCustomApply}
+                  onClose={() => setPickerOpen(false)}
+                  initStart={customRange.start}
+                  initEnd={customRange.end}
+                />
+              )}
+            </div>
+
             <button
               className="adm-btn ghost"
               style={{ fontSize: 12, marginLeft: 'auto' }}
-              onClick={fetchStats}
+              onClick={() => statsPeriod === 'custom' && customRange.start ? fetchStats(customRange.start, customRange.end) : fetchStats()}
               disabled={statsLoading}
             >
               {statsLoading ? '...' : '🔄 Atualizar'}
             </button>
           </div>
 
-          {statsLoading && !statsData ? (
+          {statsPeriod === 'custom' && !customRange.start ? (
+            <div style={{ textAlign: 'center', color: '#9ca3af', padding: '60px 20px', fontSize: 14 }}>
+              <p style={{ fontSize: 32, marginBottom: 8 }}>🗕</p>
+              Clique em <strong>Personalizado</strong> e selecione um intervalo de datas
+            </div>
+          ) : statsLoading && !statsData ? (
             <div style={{ textAlign: 'center', color: '#aaa', padding: 40 }}>Carregando...</div>
           ) : (() => {
             const allDrivers  = statsData?.drivers || [];
@@ -320,7 +521,15 @@ export default function DriversPage({ token, storeId }) {
 
             const fmt = v => (v / 100).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 
-            const periodLabel = { today: 'Hoje', yesterday: 'Ontem', week: 'Esta semana', month: 'Últimos 30 dias' }[statsPeriod];
+            const periodLabel = {
+              today:     'Hoje',
+              yesterday: 'Ontem',
+              week:      'Esta semana',
+              month:     'Últimos 30 dias',
+              custom:    customRange.start === customRange.end
+                ? fmtDateBR(customRange.start)
+                : `${fmtDateBR(customRange.start)} → ${fmtDateBR(customRange.end)}`,
+            }[statsPeriod] || '';
 
             return (
               <div>
