@@ -1,4 +1,5 @@
 import { sb } from './_supabase.js';
+import { sendWaNotification } from './_wa-notify.js';
 
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -131,5 +132,14 @@ export default async function handler(req, res) {
   };
 
   await sb().from('orders').upsert(order, { onConflict: 'id' });
+
+  // WhatsApp: Pedido recebido
+  if (phone && storeId) {
+    const firstName = (waName || customer?.name || '').split(' ')[0];
+    const greeting  = firstName ? `, ${firstName}` : '';
+    const msg = `✅ *Pedido #${dailyNumber} recebido!*\n\nOlá${greeting}! Recebemos seu pedido e já estamos preparando. 🍕\n\nAssim que sair para entrega você será avisado aqui. 😊`;
+    sendWaNotification(storeId, phone, msg);
+  }
+
   return res.status(200).json({ ok: true });
 }
